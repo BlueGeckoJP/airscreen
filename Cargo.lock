@@ -3,5 +3,5 @@
 version = 4
 
 [[package]]
-name = "air_screen"
+name = "airscreen"
 version = "0.1.0"
