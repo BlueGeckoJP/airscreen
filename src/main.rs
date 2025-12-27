@@ -1,6 +1,9 @@
+mod client;
+
 use std::{
     io::Cursor,
     os::fd::{IntoRawFd, OwnedFd},
+    sync::mpsc,
 };
 
 use ashpd::desktop::{
@@ -21,6 +24,8 @@ use pipewire::{
     },
 };
 
+use crate::client::Client;
+
 struct StreamUserData {
     format: pw::spa::param::video::VideoInfoRaw,
 }
@@ -30,13 +35,27 @@ async fn main() {
     let (stream, fd) = open_portal().await.expect("failed to open portal");
     let pipewire_node_id = stream.pipe_wire_node_id();
 
+    let (tx, rx) = mpsc::channel::<Vec<u8>>();
+
+    tokio::spawn(async move {
+        let mut client = client::tcp_client::TcpClient::new("127.0.0.1", 8080)
+            .await
+            .expect("failed to create client");
+
+        while let Ok(data) = rx.recv() {
+            if let Err(e) = client.send_data(&data).await {
+                eprintln!("Failed to send data: {:?}", e);
+            }
+        }
+    });
+
     println!(
         "Opened portal, got PipeWire node id {}, fd {}",
         pipewire_node_id,
-        &fd.try_clone().unwrap().into_raw_fd()
+        &fd.try_clone().unwrap().into_raw_fd(),
     );
 
-    if let Err(e) = start_streaming(pipewire_node_id, fd).await {
+    if let Err(e) = start_streaming(pipewire_node_id, fd, tx).await {
         eprintln!("Error during streaming: {:?}", e);
     }
 }
@@ -67,7 +86,11 @@ async fn open_portal() -> anyhow::Result<(Stream, OwnedFd)> {
     Ok((stream, fd))
 }
 
-async fn start_streaming(node_id: u32, fd: OwnedFd) -> anyhow::Result<()> {
+async fn start_streaming(
+    node_id: u32,
+    fd: OwnedFd,
+    tx: mpsc::Sender<Vec<u8>>,
+) -> anyhow::Result<()> {
     pw::init();
 
     let mainloop = pw::main_loop::MainLoopBox::new(None)?;
@@ -133,7 +156,7 @@ async fn start_streaming(node_id: u32, fd: OwnedFd) -> anyhow::Result<()> {
                 user_data.format.framerate().denom
             );
         })
-        .process(|stream, _| match stream.dequeue_buffer() {
+        .process(move |stream, _| match stream.dequeue_buffer() {
             None => println!("out of buffers"),
             Some(mut buffer) => {
                 let datas = buffer.datas_mut();
@@ -143,6 +166,8 @@ async fn start_streaming(node_id: u32, fd: OwnedFd) -> anyhow::Result<()> {
 
                 let data = &mut datas[0];
                 println!("{}", data.chunk().size());
+
+                let _ = tx.send(data.data().unwrap().to_vec());
             }
         })
         .register()?;
