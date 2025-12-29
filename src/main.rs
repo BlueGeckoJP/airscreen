@@ -1,12 +1,9 @@
-mod args;
 mod client;
 mod server;
 mod source;
 mod ui;
 
 use std::sync::mpsc;
-
-use clap::Parser;
 
 use crate::client::Client;
 use crate::server::Server;
@@ -15,8 +12,6 @@ use crate::ui::App;
 
 #[tokio::main]
 async fn main() -> eframe::Result {
-    let args = crate::args::Args::parse();
-
     let native_options = eframe::NativeOptions {
         viewport: eframe::egui::ViewportBuilder {
             title: Some("AirScreen".to_owned()),
