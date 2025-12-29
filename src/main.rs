@@ -16,7 +16,15 @@ use crate::ui::App;
 async fn main() -> eframe::Result {
     let args = crate::args::Args::parse();
 
-    let native_options = eframe::NativeOptions::default();
+    let native_options = eframe::NativeOptions {
+        viewport: eframe::egui::ViewportBuilder {
+            title: Some("AirScreen".to_owned()),
+            inner_size: Some(eframe::egui::vec2(400.0, 300.0)),
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+
     eframe::run_native(
         "AirScreen",
         native_options,
