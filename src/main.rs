@@ -15,9 +15,8 @@ use crate::ui::App;
 async fn main() -> eframe::Result {
     let args = crate::args::Args::parse();
 
-    if args.mode == "client" {
+    if args.mode == args::Mode::Client {
         run_client().await.expect("failed to run client");
-        return Ok(());
     }
 
     let native_options = eframe::NativeOptions::default();
