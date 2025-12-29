@@ -1,5 +1,6 @@
 mod args;
 mod client;
+mod server;
 mod source;
 mod ui;
 
@@ -14,10 +15,6 @@ use crate::ui::App;
 #[tokio::main]
 async fn main() -> eframe::Result {
     let args = crate::args::Args::parse();
-
-    if args.mode == args::Mode::Client {
-        run_client().await.expect("failed to run client");
-    }
 
     let native_options = eframe::NativeOptions::default();
     eframe::run_native(
