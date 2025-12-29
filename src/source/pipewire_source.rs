@@ -31,6 +31,48 @@ impl Source for PipeWireSource {
         let (stream, fd) = Self::open_portal().await?;
         let node_id = stream.pipe_wire_node_id();
 
+        tokio::spawn(async move {
+            Self::start_pw_stream(data_tx, fd, node_id)
+                .await
+                .expect("failed to start pipewire stream")
+        });
+
+        Ok(())
+    }
+}
+
+impl PipeWireSource {
+    async fn open_portal() -> anyhow::Result<(ashpd::desktop::screencast::Stream, OwnedFd)> {
+        let proxy = Screencast::new().await?;
+        let session = proxy.create_session().await?;
+        proxy
+            .select_sources(
+                &session,
+                CursorMode::Embedded,
+                SourceType::Monitor.into(),
+                false,
+                None,
+                PersistMode::DoNot,
+            )
+            .await?;
+
+        let response = proxy.start(&session, None).await?.response()?;
+        let stream = response
+            .streams()
+            .first()
+            .ok_or(anyhow::anyhow!("No streams available"))?
+            .to_owned();
+
+        let fd = proxy.open_pipe_wire_remote(&session).await?;
+
+        Ok((stream, fd))
+    }
+
+    async fn start_pw_stream(
+        data_tx: std::sync::mpsc::Sender<Vec<u8>>,
+        fd: OwnedFd,
+        node_id: u32,
+    ) -> anyhow::Result<()> {
         pw::init();
 
         let mainloop = pw::main_loop::MainLoopBox::new(None)?;
@@ -182,33 +224,5 @@ impl Source for PipeWireSource {
         mainloop.run();
 
         Ok(())
-    }
-}
-
-impl PipeWireSource {
-    async fn open_portal() -> anyhow::Result<(ashpd::desktop::screencast::Stream, OwnedFd)> {
-        let proxy = Screencast::new().await?;
-        let session = proxy.create_session().await?;
-        proxy
-            .select_sources(
-                &session,
-                CursorMode::Embedded,
-                SourceType::Monitor.into(),
-                false,
-                None,
-                PersistMode::DoNot,
-            )
-            .await?;
-
-        let response = proxy.start(&session, None).await?.response()?;
-        let stream = response
-            .streams()
-            .first()
-            .ok_or(anyhow::anyhow!("No streams available"))?
-            .to_owned();
-
-        let fd = proxy.open_pipe_wire_remote(&session).await?;
-
-        Ok((stream, fd))
     }
 }

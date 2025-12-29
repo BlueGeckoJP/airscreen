@@ -7,5 +7,6 @@ edition = "2024"
 anyhow = "1.0"
 ashpd = "0.12"
 clap = { version = "4.5", features = ["derive"] }
+eframe = "0.33"
 pipewire = "0.9"
 tokio = { version = "1.48", features = ["full"] }

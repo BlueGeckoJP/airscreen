@@ -10,19 +10,27 @@ use crate::client::Client;
 use crate::source::Source;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> eframe::Result {
     let args = crate::args::Args::parse();
 
-    match args.mode.as_str() {
-        "client" => {
-            if let Err(e) = run_client().await {
-                eprintln!("Client error: {:?}", e);
-            }
-        }
-        _ => {
-            eprintln!("Unknown mode: {}", args.mode);
-        }
+    if args.mode == "client" {
+        run_client().await.expect("failed to run client");
+        return Ok(());
     }
+
+    let native_options = eframe::NativeOptions::default();
+    eframe::run_native(
+        "AirScreen",
+        native_options,
+        Box::new(|_cc| Ok(Box::new(App::default()))),
+    )
+}
+
+#[derive(Default)]
+struct App {}
+
+impl eframe::App for App {
+    fn update(&mut self, _ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {}
 }
 
 async fn run_client() -> anyhow::Result<()> {
