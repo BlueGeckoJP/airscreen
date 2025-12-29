@@ -1,6 +1,6 @@
 use std::{io::Cursor, os::fd::OwnedFd};
 
-use crate::{StreamUserData, source::Source};
+use crate::source::Source;
 
 use ashpd::desktop::{
     PersistMode,
@@ -19,6 +19,10 @@ use pipewire::{
         utils::{Fraction, Rectangle, SpaTypes},
     },
 };
+
+struct StreamUserData {
+    format: pw::spa::param::video::VideoInfoRaw,
+}
 
 pub struct PipeWireSource {}
 

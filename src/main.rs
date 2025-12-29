@@ -3,14 +3,8 @@ mod source;
 
 use std::sync::mpsc;
 
-use pipewire as pw;
-
 use crate::client::Client;
 use crate::source::Source;
-
-struct StreamUserData {
-    format: pw::spa::param::video::VideoInfoRaw,
-}
 
 #[tokio::main]
 async fn main() {
