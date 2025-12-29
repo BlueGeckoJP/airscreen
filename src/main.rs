@@ -1,6 +1,7 @@
 mod args;
 mod client;
 mod source;
+mod ui;
 
 use std::sync::mpsc;
 
@@ -8,6 +9,7 @@ use clap::Parser;
 
 use crate::client::Client;
 use crate::source::Source;
+use crate::ui::App;
 
 #[tokio::main]
 async fn main() -> eframe::Result {
@@ -24,13 +26,6 @@ async fn main() -> eframe::Result {
         native_options,
         Box::new(|_cc| Ok(Box::new(App::default()))),
     )
-}
-
-#[derive(Default)]
-struct App {}
-
-impl eframe::App for App {
-    fn update(&mut self, _ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {}
 }
 
 async fn run_client() -> anyhow::Result<()> {
