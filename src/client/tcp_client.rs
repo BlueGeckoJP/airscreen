@@ -1,18 +1,12 @@
 use tokio::{
     io::AsyncWriteExt,
-    net::{
-        TcpStream,
-        tcp::{OwnedReadHalf, OwnedWriteHalf},
-    },
+    net::{TcpStream, tcp::OwnedWriteHalf},
 };
 
 use crate::client::Client;
 
 pub struct TcpClient {
-    ip: String,
-    port: u16,
     writer: OwnedWriteHalf,
-    reader: OwnedReadHalf,
 }
 
 impl Client for TcpClient {
@@ -20,14 +14,9 @@ impl Client for TcpClient {
         let address = format!("{}:{}", ip, port);
         let stream = TcpStream::connect(address).await?;
 
-        let (reader, writer) = stream.into_split();
+        let (_, writer) = stream.into_split();
 
-        Ok(TcpClient {
-            ip: ip.to_string(),
-            port,
-            writer,
-            reader,
-        })
+        Ok(TcpClient { writer })
     }
 
     async fn send_data(&mut self, data: &[u8]) -> anyhow::Result<()> {
