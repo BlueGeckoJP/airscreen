@@ -27,12 +27,15 @@ struct StreamUserData {
 pub struct PipeWireSource {}
 
 impl Source for PipeWireSource {
-    async fn start(&mut self, data_tx: std::sync::mpsc::Sender<Vec<u8>>) -> anyhow::Result<()> {
+    async fn start(
+        &mut self,
+        tx: std::sync::mpsc::Sender<(Vec<u8>, u32, u32)>,
+    ) -> anyhow::Result<()> {
         let (stream, fd) = Self::open_portal().await?;
         let node_id = stream.pipe_wire_node_id();
 
         tokio::spawn(async move {
-            Self::start_pw_stream(data_tx, fd, node_id)
+            Self::start_pw_stream(tx, fd, node_id)
                 .await
                 .expect("failed to start pipewire stream")
         });
@@ -69,7 +72,7 @@ impl PipeWireSource {
     }
 
     async fn start_pw_stream(
-        data_tx: std::sync::mpsc::Sender<Vec<u8>>,
+        tx: std::sync::mpsc::Sender<(Vec<u8>, u32, u32)>,
         fd: OwnedFd,
         node_id: u32,
     ) -> anyhow::Result<()> {
@@ -138,7 +141,7 @@ impl PipeWireSource {
                     user_data.format.framerate().denom
                 );
             })
-            .process(move |stream, _| match stream.dequeue_buffer() {
+            .process(move |stream, user_data| match stream.dequeue_buffer() {
                 None => println!("out of buffers"),
                 Some(mut buffer) => {
                     let datas = buffer.datas_mut();
@@ -148,7 +151,11 @@ impl PipeWireSource {
 
                     let data = &mut datas[0];
 
-                    let _ = data_tx.send(data.data().unwrap().to_vec());
+                    let _ = tx.send((
+                        data.data().unwrap().to_vec(),
+                        user_data.format.size().width,
+                        user_data.format.size().height,
+                    ));
                 }
             })
             .register()?;

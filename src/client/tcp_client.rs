@@ -19,8 +19,18 @@ impl Client for TcpClient {
         Ok(TcpClient { writer })
     }
 
-    async fn send_data(&mut self, data: &[u8]) -> anyhow::Result<()> {
+    async fn send_frame(&mut self, data: &[u8], width: u32, height: u32) -> anyhow::Result<()> {
+        // Header: 4 bytes width, 4 bytes height, 4 bytes data length
+        self.writer.write_all(&width.to_le_bytes()).await?;
+        self.writer.write_all(&height.to_le_bytes()).await?;
+        self.writer
+            .write_all(&(data.len() as u32).to_le_bytes())
+            .await?;
+
+        // Data
         self.writer.write_all(data).await?;
+
+        self.writer.flush().await?;
         Ok(())
     }
 }

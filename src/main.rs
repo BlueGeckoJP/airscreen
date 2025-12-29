@@ -31,7 +31,7 @@ async fn main() -> eframe::Result {
 async fn run_client(ip: String, port: String) -> anyhow::Result<()> {
     let port_u16 = port.parse::<u16>()?;
 
-    let (tx, rx) = mpsc::channel::<Vec<u8>>();
+    let (tx, rx) = mpsc::channel::<(Vec<u8>, u32, u32)>();
 
     tokio::spawn(async move {
         let mut client = client::tcp_client::TcpClient::new(&ip, port_u16)
@@ -39,7 +39,7 @@ async fn run_client(ip: String, port: String) -> anyhow::Result<()> {
             .expect("failed to create client");
 
         while let Ok(data) = rx.recv() {
-            if let Err(e) = client.send_data(&data).await {
+            if let Err(e) = client.send_frame(&data.0, data.1, data.2).await {
                 eprintln!("Failed to send data: {:?}", e);
             }
         }
@@ -54,7 +54,7 @@ async fn run_client(ip: String, port: String) -> anyhow::Result<()> {
 async fn run_server(port: String) -> anyhow::Result<()> {
     let port_u16 = port.parse::<u16>()?;
 
-    let (tx, rx) = mpsc::channel::<Vec<u8>>();
+    let (tx, rx) = mpsc::channel::<(Vec<u8>, u32, u32)>();
 
     tokio::spawn(async move {
         let server = server::tcp_server::TcpServer::new(port_u16, tx)
@@ -67,7 +67,12 @@ async fn run_server(port: String) -> anyhow::Result<()> {
 
     tokio::spawn(async move {
         while let Ok(data) = rx.recv() {
-            println!("Received {} bytes of data", data.len());
+            println!(
+                "Received {} bytes of data with width {} and height {}",
+                data.0.len(),
+                data.1,
+                data.2
+            );
         }
     });
 
