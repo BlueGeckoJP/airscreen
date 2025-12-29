@@ -1,5 +1,7 @@
 use eframe::egui;
 
+use crate::{run_client, run_server};
+
 pub struct App {
     is_server: bool,
     is_running: bool,
@@ -72,11 +74,24 @@ impl eframe::App for App {
                     if self.is_running {
                         if self.is_server {
                             println!("Requested to start server on port {}", self.port);
+                            let port = self.port.clone();
+                            tokio::spawn(async move {
+                                if let Err(e) = run_server(port).await {
+                                    eprintln!("Server error: {:?}", e);
+                                }
+                            });
                         } else {
                             println!(
                                 "Requested to start client connecting to {}:{}",
                                 self.ip_address, self.port
                             );
+                            let ip = self.ip_address.clone();
+                            let port = self.port.clone();
+                            tokio::spawn(async move {
+                                if let Err(e) = run_client(ip, port).await {
+                                    eprintln!("Client error: {:?}", e);
+                                }
+                            });
                         }
                     } else {
                         println!("Requested to stop");

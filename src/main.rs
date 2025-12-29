@@ -9,6 +9,7 @@ use std::sync::mpsc;
 use clap::Parser;
 
 use crate::client::Client;
+use crate::server::Server;
 use crate::source::Source;
 use crate::ui::App;
 
@@ -32,11 +33,13 @@ async fn main() -> eframe::Result {
     )
 }
 
-async fn run_client() -> anyhow::Result<()> {
+async fn run_client(ip: String, port: String) -> anyhow::Result<()> {
+    let port_u16 = port.parse::<u16>()?;
+
     let (tx, rx) = mpsc::channel::<Vec<u8>>();
 
     tokio::spawn(async move {
-        let mut client = client::tcp_client::TcpClient::new("127.0.0.1", 8080)
+        let mut client = client::tcp_client::TcpClient::new(&ip, port_u16)
             .await
             .expect("failed to create client");
 
@@ -49,6 +52,29 @@ async fn run_client() -> anyhow::Result<()> {
 
     let mut source = source::pipewire_source::PipeWireSource {};
     source.start(tx).await.expect("failed to start source");
+
+    Ok(())
+}
+
+async fn run_server(port: String) -> anyhow::Result<()> {
+    let port_u16 = port.parse::<u16>()?;
+
+    let (tx, rx) = mpsc::channel::<Vec<u8>>();
+
+    tokio::spawn(async move {
+        let server = server::tcp_server::TcpServer::new(port_u16, tx)
+            .await
+            .expect("failed to create server");
+        if let Err(e) = server.listen().await {
+            eprintln!("Server error: {:?}", e);
+        }
+    });
+
+    tokio::spawn(async move {
+        while let Ok(data) = rx.recv() {
+            println!("Received {} bytes of data", data.len());
+        }
+    });
 
     Ok(())
 }
