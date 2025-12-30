@@ -101,6 +101,7 @@ impl Server for TcpServer {
                                 e
                             ));
                         }
+                        prev_frame = Some(buf);
                     } else {
                         continue;
                     }

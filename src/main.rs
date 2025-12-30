@@ -28,7 +28,7 @@ async fn main() -> eframe::Result {
     eframe::run_native(
         "AirScreen",
         native_options,
-        Box::new(|_cc| Ok(Box::new(App::default()))),
+        Box::new(|_cc| Ok(Box::new(App::new()))),
     )
 }
 
@@ -56,10 +56,8 @@ async fn run_client(ip: String, port: String) -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn run_server(port: String) -> anyhow::Result<()> {
+async fn run_server(port: String, tx: FrameSender) -> anyhow::Result<()> {
     let port_u16 = port.parse::<u16>()?;
-
-    let (tx, rx) = mpsc::sync_channel::<FrameData>(4);
 
     tokio::spawn(async move {
         let server = server::tcp_server::TcpServer::new(port_u16, tx)
@@ -69,8 +67,6 @@ async fn run_server(port: String) -> anyhow::Result<()> {
             eprintln!("Server error: {:?}", e);
         }
     });
-
-    tokio::spawn(async move { while let Ok(_data) = rx.recv() {} });
 
     Ok(())
 }

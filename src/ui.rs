@@ -1,26 +1,33 @@
-use eframe::egui;
+use std::sync::mpsc::Receiver;
 
-use crate::{run_client, run_server};
+use eframe::egui::{self, ViewportBuilder, ViewportId};
+
+use crate::{FrameData, FrameSender, run_client, run_server};
 
 pub struct App {
+    tx: FrameSender,
+    rx: Receiver<FrameData>,
+
     is_server: bool,
     is_running: bool,
     ip_address: String,
     port: String,
 }
 
-impl Default for App {
-    fn default() -> Self {
-        Self {
+impl App {
+    pub fn new() -> Self {
+        let (tx, rx) = std::sync::mpsc::sync_channel::<FrameData>(4);
+
+        App {
+            tx,
+            rx,
             is_server: false,
             is_running: false,
             ip_address: "0.0.0.0".to_string(),
             port: "51230".to_string(),
         }
     }
-}
 
-impl App {
     fn draw_central_panel(&mut self, ctx: &eframe::egui::Context) {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("AirScreen");
@@ -75,8 +82,9 @@ impl App {
                         if self.is_server {
                             println!("Requested to start server on port {}", self.port);
                             let port = self.port.clone();
+                            let tx = self.tx.clone();
                             tokio::spawn(async move {
-                                if let Err(e) = run_server(port).await {
+                                if let Err(e) = run_server(port, tx).await {
                                     eprintln!("Server error: {:?}", e);
                                 }
                             });
@@ -104,6 +112,25 @@ impl App {
 
 impl eframe::App for App {
     fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
+        if let Ok(data) = self.rx.try_recv() {
+            let image =
+                eframe::egui::ColorImage::from_rgb([data.1 as usize, data.2 as usize], &data.0);
+            let texture = ctx.load_texture(
+                "frame_texture",
+                image,
+                eframe::egui::TextureOptions::default(),
+            );
+            ctx.show_viewport_deferred(
+                ViewportId::from_hash_of("frame_viewer"),
+                ViewportBuilder::default().with_title("AirScreen Viewer"),
+                move |ctx, _class| {
+                    egui::CentralPanel::default().show(ctx, |ui| {
+                        ui.image(&texture);
+                    });
+                },
+            );
+        }
+
         self.draw_central_panel(ctx);
     }
 }
