@@ -1,4 +1,4 @@
-use std::sync::mpsc::Receiver;
+use std::{sync::mpsc::Receiver, time::Duration};
 
 use eframe::egui::{self, ViewportBuilder, ViewportId};
 
@@ -12,6 +12,8 @@ pub struct App {
     is_running: bool,
     ip_address: String,
     port: String,
+
+    current_texture: Option<eframe::egui::TextureHandle>,
 }
 
 impl App {
@@ -25,6 +27,7 @@ impl App {
             is_running: false,
             ip_address: "0.0.0.0".to_string(),
             port: "51230".to_string(),
+            current_texture: None,
         }
     }
 
@@ -112,18 +115,41 @@ impl App {
 
 impl eframe::App for App {
     fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
-        if let Ok(data) = self.rx.try_recv() {
-            let image =
-                eframe::egui::ColorImage::from_rgb([data.1 as usize, data.2 as usize], &data.0);
-            let texture = ctx.load_texture(
-                "frame_texture",
-                image,
-                eframe::egui::TextureOptions::default(),
-            );
+        let mut latest_frame = None;
+
+        while let Ok(data) = self.rx.try_recv() {
+            latest_frame = Some(data);
+        }
+
+        if let Some(data) = latest_frame {
+            if let Some(texture) = &mut self.current_texture {
+                let image =
+                    eframe::egui::ColorImage::from_rgb([data.1 as usize, data.2 as usize], &data.0);
+                texture.set(image, eframe::egui::TextureOptions::NEAREST);
+            } else {
+                let image =
+                    eframe::egui::ColorImage::from_rgb([data.1 as usize, data.2 as usize], &data.0);
+                let texture = ctx.load_texture(
+                    "current_frame",
+                    image,
+                    eframe::egui::TextureOptions::NEAREST,
+                );
+                self.current_texture = Some(texture);
+            }
+        }
+
+        if self.is_running
+            && let Some(texture) = &self.current_texture
+        {
+            ctx.request_repaint_after(Duration::from_secs_f32(1.0 / 60.0));
+
+            let texture = texture.clone();
             ctx.show_viewport_deferred(
                 ViewportId::from_hash_of("frame_viewer"),
                 ViewportBuilder::default().with_title("AirScreen Viewer"),
                 move |ctx, _class| {
+                    ctx.request_repaint_after(Duration::from_secs_f32(1.0 / 60.0));
+
                     egui::CentralPanel::default().show(ctx, |ui| {
                         ui.image(&texture);
                     });
