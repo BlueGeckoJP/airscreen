@@ -144,8 +144,15 @@ impl PipeWireSource {
 
                     let data = &mut datas[0];
 
+                    let rgb_data = crate::color_utils::convert_to_rgb(
+                        user_data.format.format(),
+                        user_data.format.size().width,
+                        user_data.format.size().height,
+                        data.data().unwrap(),
+                    );
+
                     let _ = tx.send((
-                        data.data().unwrap().to_vec(),
+                        rgb_data,
                         user_data.format.size().width,
                         user_data.format.size().height,
                     ));
