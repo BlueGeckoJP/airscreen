@@ -1,6 +1,6 @@
 use std::{io::Cursor, os::fd::OwnedFd};
 
-use crate::source::Source;
+use crate::{FrameSender, source::Source};
 
 use ashpd::desktop::{
     PersistMode,
@@ -27,10 +27,7 @@ struct StreamUserData {
 pub struct PipeWireSource {}
 
 impl Source for PipeWireSource {
-    async fn start(
-        &mut self,
-        tx: std::sync::mpsc::Sender<(Vec<u8>, u32, u32)>,
-    ) -> anyhow::Result<()> {
+    async fn start(&mut self, tx: FrameSender) -> anyhow::Result<()> {
         let (stream, fd) = Self::open_portal().await?;
         let node_id = stream.pipe_wire_node_id();
 
@@ -71,11 +68,7 @@ impl PipeWireSource {
         Ok((stream, fd))
     }
 
-    async fn start_pw_stream(
-        tx: std::sync::mpsc::Sender<(Vec<u8>, u32, u32)>,
-        fd: OwnedFd,
-        node_id: u32,
-    ) -> anyhow::Result<()> {
+    async fn start_pw_stream(tx: FrameSender, fd: OwnedFd, node_id: u32) -> anyhow::Result<()> {
         pw::init();
 
         let mainloop = pw::main_loop::MainLoopBox::new(None)?;

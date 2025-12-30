@@ -10,6 +10,9 @@ use crate::server::Server;
 use crate::source::Source;
 use crate::ui::App;
 
+pub type FrameData = (Vec<u8>, u32, u32); // (data, width, height)
+pub type FrameSender = std::sync::mpsc::SyncSender<FrameData>;
+
 #[tokio::main]
 async fn main() -> eframe::Result {
     let native_options = eframe::NativeOptions {
@@ -31,7 +34,7 @@ async fn main() -> eframe::Result {
 async fn run_client(ip: String, port: String) -> anyhow::Result<()> {
     let port_u16 = port.parse::<u16>()?;
 
-    let (tx, rx) = mpsc::channel::<(Vec<u8>, u32, u32)>();
+    let (tx, rx) = mpsc::sync_channel::<FrameData>(4);
 
     tokio::spawn(async move {
         let mut client = client::tcp_client::TcpClient::new(&ip, port_u16)
@@ -55,7 +58,7 @@ async fn run_client(ip: String, port: String) -> anyhow::Result<()> {
 async fn run_server(port: String) -> anyhow::Result<()> {
     let port_u16 = port.parse::<u16>()?;
 
-    let (tx, rx) = mpsc::channel::<(Vec<u8>, u32, u32)>();
+    let (tx, rx) = mpsc::sync_channel::<FrameData>(4);
 
     tokio::spawn(async move {
         let server = server::tcp_server::TcpServer::new(port_u16, tx)

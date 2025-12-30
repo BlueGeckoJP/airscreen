@@ -1,17 +1,14 @@
 use tokio::{io::AsyncReadExt, net::TcpListener};
 
-use crate::server::Server;
+use crate::{FrameSender, server::Server};
 
 pub struct TcpServer {
     port: u16,
-    tx: std::sync::mpsc::Sender<(Vec<u8>, u32, u32)>,
+    tx: FrameSender,
 }
 
 impl Server for TcpServer {
-    async fn new(
-        port: u16,
-        tx: std::sync::mpsc::Sender<(Vec<u8>, u32, u32)>,
-    ) -> anyhow::Result<Self> {
+    async fn new(port: u16, tx: FrameSender) -> anyhow::Result<Self> {
         Ok(TcpServer { port, tx })
     }
 
