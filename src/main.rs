@@ -41,6 +41,7 @@ async fn run_client(ip: String, port: String) -> anyhow::Result<()> {
         while let Ok(data) = rx.recv() {
             if let Err(e) = client.send_frame(&data.0, data.1, data.2).await {
                 eprintln!("Failed to send data: {:?}", e);
+                break;
             }
         }
     });
@@ -65,16 +66,7 @@ async fn run_server(port: String) -> anyhow::Result<()> {
         }
     });
 
-    tokio::spawn(async move {
-        while let Ok(data) = rx.recv() {
-            println!(
-                "Received {} bytes of data with width {} and height {}",
-                data.0.len(),
-                data.1,
-                data.2
-            );
-        }
-    });
+    tokio::spawn(async move { while let Ok(_data) = rx.recv() {} });
 
     Ok(())
 }
