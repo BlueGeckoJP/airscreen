@@ -20,8 +20,8 @@ impl Default for App {
     }
 }
 
-impl eframe::App for App {
-    fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
+impl App {
+    fn draw_central_panel(&mut self, ctx: &eframe::egui::Context) {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("AirScreen");
             ui.add_space(10.0);
@@ -99,5 +99,11 @@ impl eframe::App for App {
                 }
             })
         });
+    }
+}
+
+impl eframe::App for App {
+    fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
+        self.draw_central_panel(ctx);
     }
 }
