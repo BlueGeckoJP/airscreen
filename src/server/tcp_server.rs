@@ -1,6 +1,6 @@
 use tokio::{io::AsyncReadExt, net::TcpListener};
 
-use crate::{FrameSender, server::Server};
+use crate::{FrameSender, header::Header, server::Server};
 
 pub struct TcpServer {
     port: u16,
@@ -23,17 +23,18 @@ impl Server for TcpServer {
         let mut prev_frame = Option::<Vec<u8>>::None;
 
         loop {
-            let mut header = [0u8; 17];
-            match socket.read_exact(&mut header).await {
+            let mut raw_header = [0u8; 17];
+            match socket.read_exact(&mut raw_header).await {
                 Ok(0) => break Err(anyhow::anyhow!("Connection closed")),
                 Ok(_) => {
-                    let mode = header[0];
-                    let width = u32::from_le_bytes([header[1], header[2], header[3], header[4]]);
-                    let height = u32::from_le_bytes([header[5], header[6], header[7], header[8]]);
-                    let total_len =
-                        u32::from_le_bytes([header[9], header[10], header[11], header[12]]);
-                    let payload_len =
-                        u32::from_le_bytes([header[13], header[14], header[15], header[16]]);
+                    let header = Header::from(&raw_header);
+                    let Header {
+                        mode,
+                        width,
+                        height,
+                        total_len,
+                        payload_len,
+                    } = header;
 
                     println!(
                         "Receiving frame: mode={}, width={}, height={}, total_len={}, payload_len={}",

@@ -1,5 +1,6 @@
 mod client;
 mod color_utils;
+mod header;
 mod server;
 mod source;
 mod ui;

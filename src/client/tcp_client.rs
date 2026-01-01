@@ -3,7 +3,7 @@ use tokio::{
     net::{TcpStream, tcp::OwnedWriteHalf},
 };
 
-use crate::client::Client;
+use crate::{client::Client, header::Header};
 
 pub struct TcpClient {
     writer: OwnedWriteHalf,
@@ -34,13 +34,16 @@ impl Client for TcpClient {
         if send_full {
             let mode: u8 = 0;
             let payload_len = data.len() as u32;
+            let header = Header {
+                mode,
+                width,
+                height,
+                total_len,
+                payload_len,
+            };
+            let header_bytes: [u8; 17] = header.into();
 
-            self.writer.write_all(&[mode]).await?;
-            self.writer.write_all(&width.to_le_bytes()).await?;
-            self.writer.write_all(&height.to_le_bytes()).await?;
-            self.writer.write_all(&total_len.to_le_bytes()).await?;
-            self.writer.write_all(&payload_len.to_le_bytes()).await?;
-
+            self.writer.write_all(&header_bytes).await?;
             self.writer.write_all(data).await?;
             self.writer.flush().await?;
 
