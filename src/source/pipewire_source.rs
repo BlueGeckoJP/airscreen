@@ -26,6 +26,7 @@ struct StreamUserData {
 
 pub struct PipeWireSource {}
 
+#[async_trait::async_trait]
 impl Source for PipeWireSource {
     async fn start(&mut self, tx: FrameSender) -> color_eyre::Result<()> {
         let (stream, fd) = Self::open_portal().await?;

@@ -50,8 +50,12 @@ async fn run_client(ip: String, port: String) -> color_eyre::Result<()> {
         }
     });
 
-    let mut source = source::pipewire_source::PipeWireSource {};
-    source.start(tx).await.expect("failed to start source");
+    let mut source = source::get_source();
+    if let Some(src) = &mut source {
+        src.start(tx).await?;
+    } else {
+        eprintln!("No source available for this OS");
+    }
 
     Ok(())
 }

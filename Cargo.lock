@@ -150,6 +150,7 @@ name = "airscreen"
 version = "0.1.0"
 dependencies = [
  "ashpd",
+ "async-trait",
  "color-eyre",
  "eframe",
  "pipewire",
