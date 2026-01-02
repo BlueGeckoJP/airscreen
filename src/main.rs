@@ -10,7 +10,6 @@ use tracing::error;
 
 use crate::client::Client;
 use crate::server::Server;
-use crate::source::Source;
 use crate::ui::App;
 
 pub type FrameData = (Vec<u8>, u32, u32); // (data, width, height)
@@ -43,8 +42,12 @@ async fn run_client(ip: String, port: String) -> color_eyre::Result<()> {
 
     let (tx, rx) = mpsc::sync_channel::<FrameData>(4);
 
-    let mut source = source::pipewire_source::PipeWireSource {};
-    source.start(tx).await?;
+    if let Some(mut src) = source::get_source() {
+        src.start(tx).await.expect("Failed to start source");
+    } else {
+        error!("No available source for this OS");
+        return Ok(());
+    }
 
     tokio::spawn(async move {
         let mut client = client::tcp_client::TcpClient::new(&ip, port_u16)
