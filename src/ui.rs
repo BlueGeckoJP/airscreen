@@ -1,6 +1,7 @@
 use std::{sync::mpsc::Receiver, time::Duration};
 
 use eframe::egui::{self, ViewportBuilder, ViewportId};
+use tracing::{error, info};
 
 use crate::{FrameData, FrameSender, run_client, run_server};
 
@@ -83,16 +84,16 @@ impl App {
 
                     if self.is_running {
                         if self.is_server {
-                            println!("Requested to start server on port {}", self.port);
+                            info!("Requested to start server on port {}", self.port);
                             let port = self.port.clone();
                             let tx = self.tx.clone();
                             tokio::spawn(async move {
                                 if let Err(e) = run_server(port, tx).await {
-                                    eprintln!("Server error: {:?}", e);
+                                    error!("Server error: {:?}", e);
                                 }
                             });
                         } else {
-                            println!(
+                            info!(
                                 "Requested to start client connecting to {}:{}",
                                 self.ip_address, self.port
                             );
@@ -100,12 +101,12 @@ impl App {
                             let port = self.port.clone();
                             tokio::spawn(async move {
                                 if let Err(e) = run_client(ip, port).await {
-                                    eprintln!("Client error: {:?}", e);
+                                    error!("Client error: {:?}", e);
                                 }
                             });
                         }
                     } else {
-                        println!("Requested to stop");
+                        info!("Requested to stop");
                     }
                 }
             })

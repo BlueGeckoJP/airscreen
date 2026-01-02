@@ -6,6 +6,8 @@ mod ui;
 
 use std::sync::mpsc;
 
+use tracing::error;
+
 use crate::client::Client;
 use crate::server::Server;
 use crate::ui::App;
@@ -15,6 +17,8 @@ pub type FrameSender = std::sync::mpsc::SyncSender<FrameData>;
 
 #[tokio::main]
 async fn main() -> eframe::Result {
+    tracing_subscriber::fmt::init();
+
     let native_options = eframe::NativeOptions {
         viewport: eframe::egui::ViewportBuilder {
             title: Some("AirScreen".to_owned()),
@@ -32,6 +36,7 @@ async fn main() -> eframe::Result {
     )
 }
 
+#[tracing::instrument]
 async fn run_client(ip: String, port: String) -> color_eyre::Result<()> {
     let port_u16 = port.parse::<u16>()?;
 
@@ -44,7 +49,7 @@ async fn run_client(ip: String, port: String) -> color_eyre::Result<()> {
 
         while let Ok(data) = rx.recv() {
             if let Err(e) = client.send_frame(&data.0, data.1, data.2).await {
-                eprintln!("Failed to send data: {:?}", e);
+                error!("Failed to send frame to server: {:?}", e);
                 break;
             }
         }
@@ -54,12 +59,13 @@ async fn run_client(ip: String, port: String) -> color_eyre::Result<()> {
     if let Some(src) = &mut source {
         src.start(tx).await?;
     } else {
-        eprintln!("No source available for this OS");
+        error!("No source available for this OS");
     }
 
     Ok(())
 }
 
+#[tracing::instrument]
 async fn run_server(port: String, tx: FrameSender) -> color_eyre::Result<()> {
     let port_u16 = port.parse::<u16>()?;
 
@@ -68,7 +74,7 @@ async fn run_server(port: String, tx: FrameSender) -> color_eyre::Result<()> {
             .await
             .expect("failed to create server");
         if let Err(e) = server.listen().await {
-            eprintln!("Server error: {:?}", e);
+            error!("Server error: {:?}", e);
         }
     });
 

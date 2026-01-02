@@ -1,4 +1,5 @@
 use tokio::{io::AsyncReadExt, net::TcpListener};
+use tracing::{info, trace};
 
 use crate::{FrameSender, header::Header, server::Server};
 
@@ -14,11 +15,11 @@ impl Server for TcpServer {
 
     async fn listen(&self) -> color_eyre::Result<()> {
         let address = format!("0.0.0.0:{}", self.port);
-        let listener = TcpListener::bind(address).await?;
-        println!("Server listening on port {}", self.port);
+        let listener = TcpListener::bind(&address).await?;
+        info!("Server listening on {}", address);
 
         let (mut socket, addr) = listener.accept().await?;
-        println!("New connection from {}", addr);
+        info!("New connection from {}", addr);
 
         let mut prev_frame = Option::<Vec<u8>>::None;
 
@@ -36,7 +37,7 @@ impl Server for TcpServer {
                         payload_len,
                     } = header;
 
-                    println!(
+                    trace!(
                         "Receiving frame: mode={}, width={}, height={}, total_len={}, payload_len={}",
                         mode, width, height, total_len, payload_len
                     );

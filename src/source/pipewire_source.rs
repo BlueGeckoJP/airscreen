@@ -19,6 +19,7 @@ use pipewire::{
         utils::{Fraction, Rectangle, SpaTypes},
     },
 };
+use tracing::{debug, info};
 
 struct StreamUserData {
     format: pw::spa::param::video::VideoInfoRaw,
@@ -93,7 +94,7 @@ impl PipeWireSource {
         let _listener = stream
             .add_local_listener_with_user_data(data)
             .state_changed(|_, _, old, new| {
-                println!("State changed: {:?} -> {:?}", old, new);
+                debug!("State changed: {:?} -> {:?}", old, new);
             })
             .param_changed(|_, user_data, id, param| {
                 let Some(param) = param else {
@@ -118,25 +119,25 @@ impl PipeWireSource {
                     .parse(param)
                     .expect("Failed to parse param changed to VideoInfoRaw");
 
-                println!("got video format:");
-                println!(
+                debug!("got video format:");
+                debug!(
                     "\tformat: {} ({:?})",
                     user_data.format.format().as_raw(),
                     user_data.format.format()
                 );
-                println!(
+                debug!(
                     "\tsize: {}x{}",
                     user_data.format.size().width,
                     user_data.format.size().height
                 );
-                println!(
+                debug!(
                     "\tframerate: {}/{}",
                     user_data.format.framerate().num,
                     user_data.format.framerate().denom
                 );
             })
             .process(move |stream, user_data| match stream.dequeue_buffer() {
-                None => println!("out of buffers"),
+                None => debug!("out of buffers"),
                 Some(mut buffer) => {
                     let datas = buffer.datas_mut();
                     if datas.is_empty() {
@@ -161,7 +162,7 @@ impl PipeWireSource {
             })
             .register()?;
 
-        println!("Created stream with id {}: {:#?}", node_id, stream);
+        info!("Created stream with id {}: {:#?}", node_id, stream);
 
         let obj = pw::spa::pod::object!(
             SpaTypes::ObjectParamFormat,
@@ -227,7 +228,7 @@ impl PipeWireSource {
             &mut params,
         )?;
 
-        println!("Connected stream");
+        info!("Connected stream");
 
         mainloop.run();
 
