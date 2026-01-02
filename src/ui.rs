@@ -3,7 +3,7 @@ use std::{sync::mpsc::Receiver, time::Duration};
 use eframe::egui::{self, ViewportBuilder, ViewportId};
 use tracing::{error, info};
 
-use crate::{FrameData, FrameSender, run_client, run_server};
+use crate::{FrameData, FrameSender, client::run_client, server::run_server};
 
 pub struct App {
     tx: FrameSender,
