@@ -10,6 +10,7 @@ use tracing::error;
 
 use crate::client::Client;
 use crate::server::Server;
+use crate::source::Source;
 use crate::ui::App;
 
 pub type FrameData = (Vec<u8>, u32, u32); // (data, width, height)
@@ -47,22 +48,16 @@ async fn run_client(ip: String, port: String) -> color_eyre::Result<()> {
             .await
             .expect("failed to create client");
 
-        loop {
-            if let Ok(data) = rx.try_recv()
-                && let Err(e) = client.send_frame(&data.0, data.1, data.2).await
-            {
+        while let Ok(data) = rx.recv() {
+            if let Err(e) = client.send_frame(&data.0, data.1, data.2).await {
                 error!("Failed to send frame to server: {:?}", e);
                 break;
             }
         }
     });
 
-    let mut source = source::get_source();
-    if let Some(src) = &mut source {
-        src.start(tx).await?;
-    } else {
-        error!("No source available for this OS");
-    }
+    let mut source = source::pipewire_source::PipeWireSource {};
+    source.start(tx).await?;
 
     Ok(())
 }
