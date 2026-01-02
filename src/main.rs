@@ -21,6 +21,7 @@ async fn main() -> eframe::Result {
             inner_size: Some(eframe::egui::vec2(400.0, 300.0)),
             ..Default::default()
         },
+        vsync: false,
         ..Default::default()
     };
 
