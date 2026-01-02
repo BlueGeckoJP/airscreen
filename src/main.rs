@@ -43,6 +43,9 @@ async fn run_client(ip: String, port: String) -> color_eyre::Result<()> {
 
     let (tx, rx) = mpsc::sync_channel::<FrameData>(4);
 
+    let mut source = source::pipewire_source::PipeWireSource {};
+    source.start(tx).await?;
+
     tokio::spawn(async move {
         let mut client = client::tcp_client::TcpClient::new(&ip, port_u16)
             .await
@@ -55,9 +58,6 @@ async fn run_client(ip: String, port: String) -> color_eyre::Result<()> {
             }
         }
     });
-
-    let mut source = source::pipewire_source::PipeWireSource {};
-    source.start(tx).await?;
 
     Ok(())
 }
