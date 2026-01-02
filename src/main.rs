@@ -42,6 +42,8 @@ async fn run_client(ip: String, port: String) -> color_eyre::Result<()> {
 
     let (tx, rx) = mpsc::sync_channel::<FrameData>(4);
 
+    // NOTE: If you create the TcpClient before initializing the Pipewire source,
+    // data will not reach rx.recv(). Therefore, you must always initialize it first.
     if let Some(mut src) = source::get_source() {
         src.start(tx).await.expect("Failed to start source");
     } else {
