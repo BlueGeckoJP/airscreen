@@ -1,5 +1,5 @@
 use tokio::{io::AsyncReadExt, net::TcpListener};
-use tracing::{info, trace};
+use tracing::{info, trace, warn};
 
 use crate::{FrameSender, header::Header, server::Server};
 
@@ -105,6 +105,7 @@ impl Server for TcpServer {
                         }
                         prev_frame = Some(buf);
                     } else {
+                        warn!("Unknown mode received: {}", mode);
                         continue;
                     }
                 }
