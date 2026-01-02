@@ -4,8 +4,10 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-ashpd = "0.12"
 color-eyre = "0.6"
 eframe = "0.33"
-pipewire = "0.9"
 tokio = { version = "1.48", features = ["full"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+ashpd = "0.12"
+pipewire = "0.9"
