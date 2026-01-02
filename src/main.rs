@@ -47,8 +47,10 @@ async fn run_client(ip: String, port: String) -> color_eyre::Result<()> {
             .await
             .expect("failed to create client");
 
-        while let Ok(data) = rx.recv() {
-            if let Err(e) = client.send_frame(&data.0, data.1, data.2).await {
+        loop {
+            if let Ok(data) = rx.try_recv()
+                && let Err(e) = client.send_frame(&data.0, data.1, data.2).await
+            {
                 error!("Failed to send frame to server: {:?}", e);
                 break;
             }
