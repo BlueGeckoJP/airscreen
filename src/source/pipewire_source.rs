@@ -27,7 +27,7 @@ struct StreamUserData {
 pub struct PipeWireSource {}
 
 impl Source for PipeWireSource {
-    async fn start(&mut self, tx: FrameSender) -> anyhow::Result<()> {
+    async fn start(&mut self, tx: FrameSender) -> color_eyre::Result<()> {
         let (stream, fd) = Self::open_portal().await?;
         let node_id = stream.pipe_wire_node_id();
 
@@ -42,7 +42,7 @@ impl Source for PipeWireSource {
 }
 
 impl PipeWireSource {
-    async fn open_portal() -> anyhow::Result<(ashpd::desktop::screencast::Stream, OwnedFd)> {
+    async fn open_portal() -> color_eyre::Result<(ashpd::desktop::screencast::Stream, OwnedFd)> {
         let proxy = Screencast::new().await?;
         let session = proxy.create_session().await?;
         proxy
@@ -60,7 +60,7 @@ impl PipeWireSource {
         let stream = response
             .streams()
             .first()
-            .ok_or(anyhow::anyhow!("No streams available"))?
+            .ok_or(color_eyre::eyre::anyhow!("No streams available"))?
             .to_owned();
 
         let fd = proxy.open_pipe_wire_remote(&session).await?;
@@ -68,7 +68,7 @@ impl PipeWireSource {
         Ok((stream, fd))
     }
 
-    async fn start_pw_stream(tx: FrameSender, fd: OwnedFd, node_id: u32) -> anyhow::Result<()> {
+    async fn start_pw_stream(tx: FrameSender, fd: OwnedFd, node_id: u32) -> color_eyre::Result<()> {
         pw::init();
 
         let mainloop = pw::main_loop::MainLoopBox::new(None)?;
@@ -217,7 +217,7 @@ impl PipeWireSource {
                 .into_inner();
 
         let mut params = [pw::spa::pod::Pod::from_bytes(&values)
-            .ok_or(anyhow::anyhow!("Failed to create pod from bytes"))?];
+            .ok_or(color_eyre::eyre::anyhow!("Failed to create pod from bytes"))?];
 
         stream.connect(
             pw::spa::utils::Direction::Input,

@@ -8,11 +8,11 @@ pub struct TcpServer {
 }
 
 impl Server for TcpServer {
-    async fn new(port: u16, tx: FrameSender) -> anyhow::Result<Self> {
+    async fn new(port: u16, tx: FrameSender) -> color_eyre::Result<Self> {
         Ok(TcpServer { port, tx })
     }
 
-    async fn listen(&self) -> anyhow::Result<()> {
+    async fn listen(&self) -> color_eyre::Result<()> {
         let address = format!("0.0.0.0:{}", self.port);
         let listener = TcpListener::bind(address).await?;
         println!("Server listening on port {}", self.port);
@@ -25,7 +25,7 @@ impl Server for TcpServer {
         loop {
             let mut raw_header = [0u8; 17];
             match socket.read_exact(&mut raw_header).await {
-                Ok(0) => break Err(anyhow::anyhow!("Connection closed")),
+                Ok(0) => break Err(color_eyre::eyre::anyhow!("Connection closed")),
                 Ok(_) => {
                     let header = Header::from(&raw_header);
                     let Header {
@@ -47,7 +47,7 @@ impl Server for TcpServer {
                     if mode == 0 {
                         prev_frame = Some(payload.clone());
                         if let Err(e) = self.tx.send((payload, width, height)) {
-                            break Err(anyhow::anyhow!(
+                            break Err(color_eyre::eyre::anyhow!(
                                 "Failed to send frame to processing channel: {:?}",
                                 e
                             ));
@@ -97,7 +97,7 @@ impl Server for TcpServer {
                         }
 
                         if let Err(e) = self.tx.send((buf.clone(), width, height)) {
-                            break Err(anyhow::anyhow!(
+                            break Err(color_eyre::eyre::anyhow!(
                                 "Failed to send frame to processing channel: {:?}",
                                 e
                             ));
@@ -107,7 +107,12 @@ impl Server for TcpServer {
                         continue;
                     }
                 }
-                Err(e) => break Err(anyhow::anyhow!("Failed to read from socket: {:?}", e)),
+                Err(e) => {
+                    break Err(color_eyre::eyre::anyhow!(
+                        "Failed to read from socket: {:?}",
+                        e
+                    ));
+                }
             }
         }
     }

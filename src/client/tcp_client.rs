@@ -11,7 +11,7 @@ pub struct TcpClient {
 }
 
 impl Client for TcpClient {
-    async fn new(ip: &str, port: u16) -> anyhow::Result<Self> {
+    async fn new(ip: &str, port: u16) -> color_eyre::Result<Self> {
         let address = format!("{}:{}", ip, port);
         let stream = TcpStream::connect(address).await?;
 
@@ -23,7 +23,7 @@ impl Client for TcpClient {
         })
     }
 
-    async fn send_frame(&mut self, data: &[u8], width: u32, height: u32) -> anyhow::Result<()> {
+    async fn send_frame(&mut self, data: &[u8], width: u32, height: u32) -> color_eyre::Result<()> {
         let total_len = data.len() as u32;
 
         let send_full = match &self.prev_frame {

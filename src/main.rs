@@ -33,7 +33,7 @@ async fn main() -> eframe::Result {
     )
 }
 
-async fn run_client(ip: String, port: String) -> anyhow::Result<()> {
+async fn run_client(ip: String, port: String) -> color_eyre::Result<()> {
     let port_u16 = port.parse::<u16>()?;
 
     let (tx, rx) = mpsc::sync_channel::<FrameData>(4);
@@ -57,7 +57,7 @@ async fn run_client(ip: String, port: String) -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn run_server(port: String, tx: FrameSender) -> anyhow::Result<()> {
+async fn run_server(port: String, tx: FrameSender) -> color_eyre::Result<()> {
     let port_u16 = port.parse::<u16>()?;
 
     tokio::spawn(async move {
