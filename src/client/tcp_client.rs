@@ -82,13 +82,16 @@ impl Client for TcpClient {
 
         let mode: u8 = 1;
         let payload_len = payload.len() as u32;
+        let header = Header {
+            mode,
+            width,
+            height,
+            total_len,
+            payload_len,
+        };
+        let header_bytes: [u8; 17] = header.into();
 
-        self.writer.write_all(&[mode]).await?;
-        self.writer.write_all(&width.to_le_bytes()).await?;
-        self.writer.write_all(&height.to_le_bytes()).await?;
-        self.writer.write_all(&total_len.to_le_bytes()).await?;
-        self.writer.write_all(&payload_len.to_le_bytes()).await?;
-
+        self.writer.write_all(&header_bytes).await?;
         self.writer.write_all(&payload).await?;
         self.writer.flush().await?;
 

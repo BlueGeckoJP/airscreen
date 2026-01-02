@@ -8,7 +8,6 @@ use std::sync::mpsc;
 
 use crate::client::Client;
 use crate::server::Server;
-use crate::source::Source;
 use crate::ui::App;
 
 pub type FrameData = (Vec<u8>, u32, u32); // (data, width, height)
