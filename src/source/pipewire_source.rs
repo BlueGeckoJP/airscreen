@@ -19,7 +19,7 @@ use pipewire::{
         utils::{Fraction, Rectangle, SpaTypes},
     },
 };
-use tracing::{debug, info};
+use tracing::{debug, error, info};
 
 struct StreamUserData {
     format: pw::spa::param::video::VideoInfoRaw,
@@ -153,11 +153,13 @@ impl PipeWireSource {
                         data.data().unwrap(),
                     );
 
-                    let _ = tx.send((
+                    if let Err(e) = tx.send((
                         rgb_data,
                         user_data.format.size().width,
                         user_data.format.size().height,
-                    ));
+                    )) {
+                        error!("Failed to send frame: {:?}", e);
+                    }
                 }
             })
             .register()?;
