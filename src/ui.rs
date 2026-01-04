@@ -1,4 +1,4 @@
-use std::{sync::mpsc::Receiver, time::Duration};
+use std::time::Duration;
 
 use eframe::egui::{self, ViewportBuilder, ViewportId};
 use tracing::{error, info};
@@ -9,7 +9,7 @@ use crate::{
 
 pub struct App {
     tx: FrameSender,
-    rx: Receiver<FrameData>,
+    rx: crossbeam_channel::Receiver<FrameData>,
 
     is_server: bool,
     is_running: bool,
@@ -23,7 +23,7 @@ pub struct App {
 
 impl App {
     pub fn new() -> Self {
-        let (tx, rx) = std::sync::mpsc::sync_channel::<FrameData>(4);
+        let (tx, rx) = crossbeam_channel::bounded(4);
 
         App {
             tx,

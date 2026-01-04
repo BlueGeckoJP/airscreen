@@ -23,7 +23,7 @@ impl FrameData {
     }
 }
 
-pub type FrameSender = std::sync::mpsc::SyncSender<FrameData>;
+pub type FrameSender = crossbeam_channel::Sender<FrameData>;
 
 #[tokio::main]
 async fn main() -> eframe::Result {

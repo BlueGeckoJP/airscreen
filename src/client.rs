@@ -1,8 +1,6 @@
-use std::sync::mpsc;
-
 use tracing::error;
 
-use crate::{FrameData, client, source};
+use crate::{client, source};
 
 pub mod tcp_client;
 
@@ -17,7 +15,7 @@ pub trait Client {
 pub async fn run_client(ip: String, port: String) -> color_eyre::Result<()> {
     let port_u16 = port.parse::<u16>()?;
 
-    let (tx, rx) = mpsc::sync_channel::<FrameData>(4);
+    let (tx, rx) = crossbeam_channel::bounded(4);
 
     // NOTE: If you create the TcpClient before initializing the Pipewire source,
     // data will not reach rx.recv(). Therefore, you must always initialize it first.
