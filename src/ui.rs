@@ -119,12 +119,9 @@ impl App {
     }
 
     fn draw_viewer_viewport(&mut self, ctx: &eframe::egui::Context) {
-        if !self.is_running {
+        if !self.is_running || self.current_texture.is_none() {
             return;
         }
-
-        ctx.request_repaint_after(Duration::from_secs_f32(1.0 / 60.0));
-        self.update_texture(ctx);
 
         let texture = match &self.current_texture {
             Some(tex) => tex.clone(),
@@ -182,7 +179,11 @@ impl App {
 
 impl eframe::App for App {
     fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
+        self.update_texture(ctx);
+        ctx.request_repaint_after(Duration::from_secs_f32(1.0 / 60.0));
+
         self.draw_viewer_viewport(ctx);
+
         self.draw_central_panel(ctx);
     }
 }
