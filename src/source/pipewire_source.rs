@@ -1,6 +1,6 @@
 use std::{io::Cursor, os::fd::OwnedFd};
 
-use crate::{FrameSender, source::Source};
+use crate::{FrameData, FrameSender, source::Source};
 
 use ashpd::desktop::{
     PersistMode,
@@ -153,11 +153,12 @@ impl PipeWireSource {
                         data.data().unwrap(),
                     );
 
-                    if let Err(e) = tx.send((
-                        rgb_data,
+                    let frame_data = FrameData::new(
+                        rgb_data.clone(),
                         user_data.format.size().width,
                         user_data.format.size().height,
-                    )) {
+                    );
+                    if let Err(e) = tx.send(frame_data) {
                         error!("Failed to send frame: {:?}", e);
                     }
                 }

@@ -34,7 +34,7 @@ pub async fn run_client(ip: String, port: String) -> color_eyre::Result<()> {
             .expect("failed to create client");
 
         while let Ok(data) = rx.recv() {
-            if let Err(e) = client.send_frame(&data.0, data.1, data.2).await {
+            if let Err(e) = client.send_frame(&data.data, data.width, data.height).await {
                 error!("Failed to send frame to server: {:?}", e);
                 break;
             }

@@ -1,7 +1,7 @@
 use tokio::{io::AsyncReadExt, net::TcpListener};
 use tracing::{info, trace, warn};
 
-use crate::{FrameSender, header::Header, server::Server};
+use crate::{FrameData, FrameSender, header::Header, server::Server};
 
 pub struct TcpServer {
     port: u16,
@@ -47,7 +47,8 @@ impl Server for TcpServer {
 
                     if mode == 0 {
                         prev_frame = Some(payload.clone());
-                        if let Err(e) = self.tx.send((payload, width, height)) {
+                        let frame_data = FrameData::new(payload, width, height);
+                        if let Err(e) = self.tx.send(frame_data) {
                             break Err(color_eyre::eyre::anyhow!(
                                 "Failed to send frame to processing channel: {:?}",
                                 e
@@ -97,7 +98,8 @@ impl Server for TcpServer {
                             cursor += len;
                         }
 
-                        if let Err(e) = self.tx.send((buf.clone(), width, height)) {
+                        let frame_data = FrameData::new(buf.clone(), width, height);
+                        if let Err(e) = self.tx.send(frame_data) {
                             break Err(color_eyre::eyre::anyhow!(
                                 "Failed to send frame to processing channel: {:?}",
                                 e

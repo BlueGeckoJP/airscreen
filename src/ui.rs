@@ -122,12 +122,16 @@ impl App {
 
         if let Some(data) = latest_frame {
             if let Some(texture) = &mut self.current_texture {
-                let image =
-                    eframe::egui::ColorImage::from_rgb([data.1 as usize, data.2 as usize], &data.0);
+                let image = eframe::egui::ColorImage::from_rgb(
+                    [data.width as usize, data.height as usize],
+                    &data.data,
+                );
                 texture.set(image, eframe::egui::TextureOptions::NEAREST);
             } else {
-                let image =
-                    eframe::egui::ColorImage::from_rgb([data.1 as usize, data.2 as usize], &data.0);
+                let image = eframe::egui::ColorImage::from_rgb(
+                    [data.width as usize, data.height as usize],
+                    &data.data,
+                );
                 let texture = ctx.load_texture(
                     "current_frame",
                     image,
