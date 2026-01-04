@@ -158,7 +158,9 @@ impl App {
             let texture = texture.clone();
             ctx.show_viewport_deferred(
                 ViewportId::from_hash_of("frame_viewer"),
-                ViewportBuilder::default().with_title("AirScreen Viewer"),
+                ViewportBuilder::default()
+                    .with_title("AirScreen Viewer")
+                    .with_active(true),
                 move |ctx, _class| {
                     ctx.request_repaint_after(Duration::from_secs_f32(1.0 / 60.0));
 
