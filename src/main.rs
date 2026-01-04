@@ -1,5 +1,6 @@
 mod client;
 mod header;
+mod perf;
 mod server;
 mod source;
 mod ui;

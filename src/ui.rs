@@ -3,7 +3,9 @@ use std::{sync::mpsc::Receiver, time::Duration};
 use eframe::egui::{self, ViewportBuilder, ViewportId};
 use tracing::{error, info};
 
-use crate::{FrameData, FrameSender, client::run_client, server::run_server};
+use crate::{
+    FrameData, FrameSender, client::run_client, perf::FrameLatencyMetrics, server::run_server,
+};
 
 pub struct App {
     tx: FrameSender,
@@ -15,6 +17,8 @@ pub struct App {
     port: String,
 
     current_texture: Option<eframe::egui::TextureHandle>,
+
+    metrics: FrameLatencyMetrics,
 }
 
 impl App {
@@ -29,6 +33,7 @@ impl App {
             ip_address: "0.0.0.0".to_string(),
             port: "51230".to_string(),
             current_texture: None,
+            metrics: FrameLatencyMetrics::default(),
         }
     }
 
@@ -121,6 +126,8 @@ impl App {
         }
 
         if let Some(data) = latest_frame {
+            self.metrics.record_period_latency();
+
             if let Some(texture) = &mut self.current_texture {
                 let image = eframe::egui::ColorImage::from_rgb(
                     [data.width as usize, data.height as usize],
@@ -139,6 +146,8 @@ impl App {
                 );
                 self.current_texture = Some(texture);
             }
+
+            self.metrics.record_period_latency();
         }
 
         if self.is_running
