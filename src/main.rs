@@ -36,6 +36,7 @@ async fn main() -> eframe::Result {
             ..Default::default()
         },
         vsync: false,
+        renderer: eframe::Renderer::Wgpu,
         ..Default::default()
     };
 
