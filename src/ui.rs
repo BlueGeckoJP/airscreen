@@ -119,6 +119,34 @@ impl App {
     }
 
     fn draw_viewer_viewport(&mut self, ctx: &eframe::egui::Context) {
+        if !self.is_running {
+            return;
+        }
+
+        ctx.request_repaint_after(Duration::from_secs_f32(1.0 / 60.0));
+        self.update_texture(ctx);
+
+        let texture = match &self.current_texture {
+            Some(tex) => tex.clone(),
+            None => return,
+        };
+
+        ctx.show_viewport_deferred(
+            ViewportId::from_hash_of("frame_viewer"),
+            ViewportBuilder::default()
+                .with_title("AirScreen Viewer")
+                .with_active(true),
+            move |ctx, _class| {
+                ctx.request_repaint_after(Duration::from_secs_f32(1.0 / 60.0));
+
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    ui.image(&texture);
+                });
+            },
+        );
+    }
+
+    fn update_texture(&mut self, ctx: &eframe::egui::Context) {
         let mut latest_frame = None;
 
         while let Ok(data) = self.rx.try_recv() {
@@ -148,27 +176,6 @@ impl App {
             }
 
             self.metrics.record_period_latency();
-        }
-
-        if self.is_running
-            && let Some(texture) = &self.current_texture
-        {
-            ctx.request_repaint_after(Duration::from_secs_f32(1.0 / 60.0));
-
-            let texture = texture.clone();
-            ctx.show_viewport_deferred(
-                ViewportId::from_hash_of("frame_viewer"),
-                ViewportBuilder::default()
-                    .with_title("AirScreen Viewer")
-                    .with_active(true),
-                move |ctx, _class| {
-                    ctx.request_repaint_after(Duration::from_secs_f32(1.0 / 60.0));
-
-                    egui::CentralPanel::default().show(ctx, |ui| {
-                        ui.image(&texture);
-                    });
-                },
-            );
         }
     }
 }
