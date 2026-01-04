@@ -112,10 +112,8 @@ impl App {
             })
         });
     }
-}
 
-impl eframe::App for App {
-    fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
+    fn draw_viewer_viewport(&mut self, ctx: &eframe::egui::Context) {
         let mut latest_frame = None;
 
         while let Ok(data) = self.rx.try_recv() {
@@ -157,7 +155,12 @@ impl eframe::App for App {
                 },
             );
         }
+    }
+}
 
+impl eframe::App for App {
+    fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
+        self.draw_viewer_viewport(ctx);
         self.draw_central_panel(ctx);
     }
 }
