@@ -1,3 +1,4 @@
+use tokio::task::JoinHandle;
 use tracing::error;
 
 use crate::{FrameSender, server};
@@ -12,10 +13,10 @@ pub trait Server {
 }
 
 #[tracing::instrument]
-pub async fn run_server(port: String, tx: FrameSender) -> color_eyre::Result<()> {
+pub async fn run_server(port: String, tx: FrameSender) -> color_eyre::Result<JoinHandle<()>> {
     let port_u16 = port.parse::<u16>()?;
 
-    tokio::spawn(async move {
+    let join_handle = tokio::spawn(async move {
         let server = server::tcp_server::TcpServer::new(port_u16, tx)
             .await
             .expect("failed to create server");
@@ -24,5 +25,5 @@ pub async fn run_server(port: String, tx: FrameSender) -> color_eyre::Result<()>
         }
     });
 
-    Ok(())
+    Ok(join_handle)
 }

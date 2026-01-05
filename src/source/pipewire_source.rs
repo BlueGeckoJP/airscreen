@@ -19,6 +19,7 @@ use pipewire::{
         utils::{Fraction, Rectangle, SpaTypes},
     },
 };
+use tokio::task::JoinHandle;
 use tracing::{debug, error, info};
 
 struct StreamUserData {
@@ -29,17 +30,17 @@ pub struct PipeWireSource {}
 
 #[async_trait::async_trait]
 impl Source for PipeWireSource {
-    async fn start(&mut self, tx: FrameSender) -> color_eyre::Result<()> {
+    async fn start(&mut self, tx: FrameSender) -> color_eyre::Result<JoinHandle<()>> {
         let (stream, fd) = Self::open_portal().await?;
         let node_id = stream.pipe_wire_node_id();
 
-        tokio::spawn(async move {
+        let join_handle = tokio::spawn(async move {
             Self::start_pw_stream(tx, fd, node_id)
                 .await
                 .expect("failed to start pipewire stream")
         });
 
-        Ok(())
+        Ok(join_handle)
     }
 }
 
@@ -160,6 +161,7 @@ impl PipeWireSource {
                     );
                     if let Err(e) = tx.send(frame_data) {
                         error!("Failed to send frame: {:?}", e);
+                        stream.disconnect().unwrap();
                     }
                 }
             })

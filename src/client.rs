@@ -1,3 +1,4 @@
+use tokio::task::JoinHandle;
 use tracing::error;
 
 use crate::{client, source};
@@ -12,21 +13,24 @@ pub trait Client {
 }
 
 #[tracing::instrument]
-pub async fn run_client(ip: String, port: String) -> color_eyre::Result<()> {
+pub async fn run_client(ip: String, port: String) -> color_eyre::Result<Vec<JoinHandle<()>>> {
     let port_u16 = port.parse::<u16>()?;
 
     let (tx, rx) = crossbeam_channel::bounded(4);
 
+    let mut join_handles = vec![];
+
     // NOTE: If you create the TcpClient before initializing the Pipewire source,
     // data will not reach rx.recv(). Therefore, you must always initialize it first.
     if let Some(mut src) = source::get_source() {
-        src.start(tx).await.expect("Failed to start source");
+        let join_handle = src.start(tx).await.expect("Failed to start source");
+        join_handles.push(join_handle);
     } else {
         error!("No available source for this OS");
-        return Ok(());
+        return Ok(vec![]);
     }
 
-    tokio::spawn(async move {
+    let join_handle = tokio::spawn(async move {
         let mut client = client::tcp_client::TcpClient::new(&ip, port_u16)
             .await
             .expect("failed to create client");
@@ -38,6 +42,7 @@ pub async fn run_client(ip: String, port: String) -> color_eyre::Result<()> {
             }
         }
     });
+    join_handles.push(join_handle);
 
-    Ok(())
+    Ok(join_handles)
 }

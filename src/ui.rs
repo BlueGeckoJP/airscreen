@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use eframe::egui::{self, ViewportBuilder, ViewportId};
+use tokio::task::JoinHandle;
 use tracing::{error, info};
 
 use crate::{
@@ -19,6 +20,8 @@ pub struct App {
     current_texture: Option<eframe::egui::TextureHandle>,
 
     metrics: FrameLatencyMetrics,
+
+    join_handles: Vec<JoinHandle<()>>,
 }
 
 impl App {
@@ -34,6 +37,13 @@ impl App {
             port: "51230".to_string(),
             current_texture: None,
             metrics: FrameLatencyMetrics::default(),
+            join_handles: vec![],
+        }
+    }
+
+    fn stop_handles(&mut self) {
+        for handle in self.join_handles.drain(..) {
+            handle.abort();
         }
     }
 
@@ -89,6 +99,7 @@ impl App {
 
                     if !self.is_running {
                         info!("Requested to stop");
+                        self.stop_handles();
                         return;
                     }
 
@@ -96,11 +107,20 @@ impl App {
                         info!("Requested to start server on port {}", self.port);
                         let port = self.port.clone();
                         let tx = self.tx.clone();
-                        tokio::spawn(async move {
-                            if let Err(e) = run_server(port, tx).await {
-                                error!("Server error: {:?}", e);
+
+                        let handle = tokio::spawn(async {
+                            match run_server(port, tx).await {
+                                Ok(join_handle) => {
+                                    if let Err(e) = join_handle.await {
+                                        error!("Server task error: {:?}", e);
+                                    }
+                                }
+                                Err(e) => {
+                                    error!("Failed to start server: {:?}", e);
+                                }
                             }
                         });
+                        self.join_handles.push(handle);
                     } else {
                         info!(
                             "Requested to start client connecting to {}:{}",
@@ -108,11 +128,22 @@ impl App {
                         );
                         let ip = self.ip_address.clone();
                         let port = self.port.clone();
-                        tokio::spawn(async move {
-                            if let Err(e) = run_client(ip, port).await {
-                                error!("Client error: {:?}", e);
+
+                        let handle = tokio::spawn(async {
+                            match run_client(ip, port).await {
+                                Ok(join_handles) => {
+                                    for handle in join_handles {
+                                        if let Err(e) = handle.await {
+                                            error!("Client task error: {:?}", e);
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    error!("Failed to start client: {:?}", e);
+                                }
                             }
                         });
+                        self.join_handles.push(handle);
                     }
                 }
             })
@@ -140,6 +171,12 @@ impl App {
                 egui::CentralPanel::default().show(ctx, |ui| {
                     ui.image(&texture);
                 });
+
+                if ctx.input(|i| i.viewport().close_requested()) {
+                    info!("Requested to stop");
+                    self.is_running = false;
+                    self.stop_handles();
+                }
             },
         );
     }
@@ -183,5 +220,10 @@ impl eframe::App for App {
         self.update_texture(ctx);
         self.draw_viewer_viewport(ctx);
         self.draw_central_panel(ctx);
+    }
+
+    fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
+        info!("Exiting application, stopping all tasks");
+        self.stop_handles();
     }
 }
