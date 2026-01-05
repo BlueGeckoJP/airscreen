@@ -123,19 +123,19 @@ impl App {
             return;
         }
 
+        ctx.request_repaint_after(Duration::from_secs_f32(1.0 / 60.0));
+
         let texture = match &self.current_texture {
             Some(tex) => tex.clone(),
             None => return,
         };
 
-        ctx.show_viewport_deferred(
+        ctx.show_viewport_immediate(
             ViewportId::from_hash_of("frame_viewer"),
             ViewportBuilder::default()
                 .with_title("AirScreen Viewer")
                 .with_active(true),
             move |ctx, _class| {
-                ctx.request_repaint_after(Duration::from_secs_f32(1.0 / 60.0));
-
                 egui::CentralPanel::default().show(ctx, |ui| {
                     ui.image(&texture);
                 });
@@ -180,10 +180,7 @@ impl App {
 impl eframe::App for App {
     fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
         self.update_texture(ctx);
-        ctx.request_repaint_after(Duration::from_secs_f32(1.0 / 60.0));
-
         self.draw_viewer_viewport(ctx);
-
         self.draw_central_panel(ctx);
     }
 }
