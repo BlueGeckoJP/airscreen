@@ -87,31 +87,32 @@ impl App {
                 if ui.button(button_text).clicked() {
                     self.is_running = !self.is_running;
 
-                    if self.is_running {
-                        if self.is_server {
-                            info!("Requested to start server on port {}", self.port);
-                            let port = self.port.clone();
-                            let tx = self.tx.clone();
-                            tokio::spawn(async move {
-                                if let Err(e) = run_server(port, tx).await {
-                                    error!("Server error: {:?}", e);
-                                }
-                            });
-                        } else {
-                            info!(
-                                "Requested to start client connecting to {}:{}",
-                                self.ip_address, self.port
-                            );
-                            let ip = self.ip_address.clone();
-                            let port = self.port.clone();
-                            tokio::spawn(async move {
-                                if let Err(e) = run_client(ip, port).await {
-                                    error!("Client error: {:?}", e);
-                                }
-                            });
-                        }
-                    } else {
+                    if !self.is_running {
                         info!("Requested to stop");
+                        return;
+                    }
+
+                    if self.is_server {
+                        info!("Requested to start server on port {}", self.port);
+                        let port = self.port.clone();
+                        let tx = self.tx.clone();
+                        tokio::spawn(async move {
+                            if let Err(e) = run_server(port, tx).await {
+                                error!("Server error: {:?}", e);
+                            }
+                        });
+                    } else {
+                        info!(
+                            "Requested to start client connecting to {}:{}",
+                            self.ip_address, self.port
+                        );
+                        let ip = self.ip_address.clone();
+                        let port = self.port.clone();
+                        tokio::spawn(async move {
+                            if let Err(e) = run_client(ip, port).await {
+                                error!("Client error: {:?}", e);
+                            }
+                        });
                     }
                 }
             })
