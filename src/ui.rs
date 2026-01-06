@@ -5,12 +5,12 @@ use tokio::task::JoinHandle;
 use tracing::{error, info};
 
 use crate::{
-    FrameData, FrameSender, client::run_client, perf::FrameLatencyMetrics, server::run_server,
+    FrameReceiver, FrameSender, client::run_client, perf::FrameLatencyMetrics, server::run_server,
 };
 
 pub struct App {
     tx: FrameSender,
-    rx: crossbeam_channel::Receiver<FrameData>,
+    rx: FrameReceiver,
 
     is_server: bool,
     is_running: bool,

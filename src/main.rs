@@ -1,10 +1,10 @@
 mod client;
-mod utils;
 mod header;
 mod perf;
 mod server;
 mod source;
 mod ui;
+mod utils;
 
 use crate::ui::App;
 
@@ -25,6 +25,7 @@ impl FrameData {
 }
 
 pub type FrameSender = crossbeam_channel::Sender<FrameData>;
+pub type FrameReceiver = crossbeam_channel::Receiver<FrameData>;
 
 #[tokio::main]
 async fn main() -> eframe::Result {
