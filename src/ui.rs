@@ -5,7 +5,8 @@ use tokio::task::JoinHandle;
 use tracing::{error, info};
 
 use crate::{
-    FrameReceiver, FrameSender, client::run_client, perf::FrameLatencyMetrics, server::run_server,
+    FrameReceiver, FrameSender, client::run_client,
+    perf::frame_latency_metrics::FrameLatencyMetrics, server::run_server,
 };
 
 pub struct App {
