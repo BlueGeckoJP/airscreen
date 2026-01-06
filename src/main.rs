@@ -1,5 +1,5 @@
 mod client;
-mod color_utils;
+mod utils;
 mod header;
 mod perf;
 mod server;

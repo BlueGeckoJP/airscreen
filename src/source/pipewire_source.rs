@@ -147,7 +147,7 @@ impl PipeWireSource {
 
                     let data = &mut datas[0];
 
-                    let rgb_data = crate::color_utils::for_pipewire::convert_to_rgb(
+                    let rgb_data = crate::utils::pixel_format_utils::convert_to_rgb(
                         user_data.format.format(),
                         user_data.format.size().width,
                         user_data.format.size().height,
