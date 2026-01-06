@@ -7,7 +7,7 @@ use crate::{client::Client, header::Header, perf::tcp_client_metrics::TcpClientM
 
 pub struct TcpClient {
     writer: OwnedWriteHalf,
-    prev_frame: Option<Vec<u8>>,
+    compressor: turbojpeg::Compressor,
     metrics: TcpClientMetrics,
 }
 
@@ -17,10 +17,12 @@ impl Client for TcpClient {
         let stream = TcpStream::connect(address).await?;
 
         let (_, writer) = stream.into_split();
+        let mut compressor = turbojpeg::Compressor::new()?;
+        compressor.set_quality(80)?;
 
         Ok(TcpClient {
             writer,
-            prev_frame: None,
+            compressor,
             metrics: TcpClientMetrics::default(),
         })
     }
@@ -28,65 +30,17 @@ impl Client for TcpClient {
     async fn send_frame(&mut self, data: &[u8], width: u32, height: u32) -> color_eyre::Result<()> {
         let total_len = data.len() as u32;
 
-        let send_full = match &self.prev_frame {
-            Some(prev) => prev.len() != data.len(),
-            None => true,
+        let image = turbojpeg::Image {
+            pixels: data,
+            width: width as usize,
+            pitch: width as usize * 3, // RGB is 3 bytes per pixel
+            height: height as usize,
+            format: turbojpeg::PixelFormat::RGB,
         };
+        let jpeg_data = self.compressor.compress_to_vec(image)?;
 
-        if send_full {
-            let mode: u8 = 0;
-            let payload_len = data.len() as u32;
-            let header = Header {
-                mode,
-                width,
-                height,
-                total_len,
-                payload_len,
-            };
-            let header_bytes: [u8; 17] = header.into();
-
-            self.writer.write_all(&header_bytes).await?;
-            self.writer.write_all(data).await?;
-            self.writer.flush().await?;
-
-            self.metrics
-                .record_full_frame(data.len() + header_bytes.len());
-            self.prev_frame = Some(data.to_vec());
-            return Ok(());
-        }
-
-        let prev = self.prev_frame.as_ref().unwrap();
-        let mut chunks: Vec<(u32, usize)> = Vec::new();
-        let mut i = 0usize;
-        while i < data.len() {
-            if data[i] != prev[i] {
-                let start = i;
-                i += 1;
-                while i < data.len() && data[i] != prev[i] {
-                    i += 1;
-                }
-                chunks.push((start as u32, i - start));
-            } else {
-                i += 1;
-            }
-        }
-
-        if chunks.is_empty() {
-            self.metrics.record_skipped_frame();
-            return Ok(());
-        }
-
-        let mut payload: Vec<u8> = Vec::new();
-        payload.extend_from_slice(&(chunks.len() as u32).to_le_bytes());
-        for (offset, len) in &chunks {
-            payload.extend_from_slice(&offset.to_le_bytes());
-            payload.extend_from_slice(&(*len as u32).to_le_bytes());
-            let off = *offset as usize;
-            payload.extend_from_slice(&data[off..(off + *len)]);
-        }
-
-        let mode: u8 = 1;
-        let payload_len = payload.len() as u32;
+        let mode: u8 = 0;
+        let payload_len = jpeg_data.len() as u32;
         let header = Header {
             mode,
             width,
@@ -97,14 +51,11 @@ impl Client for TcpClient {
         let header_bytes: [u8; 17] = header.into();
 
         self.writer.write_all(&header_bytes).await?;
-        self.writer.write_all(&payload).await?;
+        self.writer.write_all(&jpeg_data).await?;
         self.writer.flush().await?;
 
-        self.metrics.record_delta_frame(
-            payload.len() + header_bytes.len(),
-            data.len() + header_bytes.len(),
-        );
-        self.prev_frame = Some(data.to_vec());
+        self.metrics
+            .record_full_frame(jpeg_data.len() + header_bytes.len());
 
         Ok(())
     }

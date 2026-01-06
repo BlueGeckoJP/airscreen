@@ -1,5 +1,5 @@
 use tokio::{io::AsyncReadExt, net::TcpListener};
-use tracing::{info, trace, warn};
+use tracing::{info, trace};
 
 use crate::{
     FrameData, FrameSender, header::Header, perf::tcp_server_metrics::TcpServerMetrics,
@@ -24,105 +24,43 @@ impl Server for TcpServer {
         let (mut socket, addr) = listener.accept().await?;
         info!("New connection from {}", addr);
 
-        let mut prev_frame = Option::<Vec<u8>>::None;
         let mut metrics = TcpServerMetrics::default();
 
         loop {
             let mut raw_header = [0u8; 17];
             match socket.read_exact(&mut raw_header).await {
-                Ok(0) => break Err(color_eyre::eyre::anyhow!("Connection closed")),
+                Ok(0) => break Err(color_eyre::eyre::eyre!("Connection closed")),
                 Ok(_) => {
                     let header = Header::from(&raw_header);
                     let Header {
-                        mode,
+                        mode: _,
                         width,
                         height,
-                        total_len,
+                        total_len: _,
                         payload_len,
                     } = header;
 
                     trace!(
-                        "Receiving frame: mode={}, width={}, height={}, total_len={}, payload_len={}",
-                        mode, width, height, total_len, payload_len
+                        "Receiving frame: width={}, height={}, payload_len={}",
+                        width, height, payload_len
                     );
 
                     let mut payload = vec![0u8; payload_len as usize];
                     socket.read_exact(&mut payload).await?;
 
-                    if mode == 0 {
-                        metrics.record_full_frame(payload.len() + raw_header.len());
-                        prev_frame = Some(payload.clone());
-                        let frame_data = FrameData::new(payload, width, height);
-                        if let Err(e) = self.tx.send(frame_data) {
-                            break Err(color_eyre::eyre::anyhow!(
-                                "Failed to send frame to processing channel: {:?}",
-                                e
-                            ));
-                        }
-                    } else if mode == 1 {
-                        let mut cursor = 0usize;
-                        if payload_len < 4 {
-                            continue;
-                        }
-                        let num_chunks =
-                            u32::from_le_bytes([payload[0], payload[1], payload[2], payload[3]])
-                                as usize;
-                        cursor += 4;
+                    let rgb_image = turbojpeg::decompress(&payload, turbojpeg::PixelFormat::RGB)?;
 
-                        if prev_frame.is_none()
-                            || prev_frame.as_ref().unwrap().len() != total_len as usize
-                        {
-                            prev_frame = Some(vec![0u8; total_len as usize]);
-                        }
-                        let mut buf = prev_frame.take().unwrap();
-
-                        for _ in 0..num_chunks {
-                            if cursor + 8 > payload.len() {
-                                break;
-                            }
-                            let offset = u32::from_le_bytes([
-                                payload[cursor],
-                                payload[cursor + 1],
-                                payload[cursor + 2],
-                                payload[cursor + 3],
-                            ]) as usize;
-                            cursor += 4;
-                            let len = u32::from_le_bytes([
-                                payload[cursor],
-                                payload[cursor + 1],
-                                payload[cursor + 2],
-                                payload[cursor + 3],
-                            ]) as usize;
-                            cursor += 4;
-
-                            if cursor + len > payload.len() || offset + len > buf.len() {
-                                break;
-                            }
-                            buf[offset..offset + len]
-                                .copy_from_slice(&payload[cursor..cursor + len]);
-                            cursor += len;
-                        }
-
-                        metrics.record_delta_frame(
-                            payload_len as usize + raw_header.len(),
-                            total_len as usize,
-                        );
-
-                        let frame_data = FrameData::new(buf.clone(), width, height);
-                        if let Err(e) = self.tx.send(frame_data) {
-                            break Err(color_eyre::eyre::anyhow!(
-                                "Failed to send frame to processing channel: {:?}",
-                                e
-                            ));
-                        }
-                        prev_frame = Some(buf);
-                    } else {
-                        warn!("Unknown mode received: {}", mode);
-                        continue;
+                    metrics.record_full_frame(payload.len() + raw_header.len());
+                    let frame_data = FrameData::new(rgb_image.pixels, width, height);
+                    if let Err(e) = self.tx.send(frame_data) {
+                        break Err(color_eyre::eyre::eyre!(
+                            "Failed to send frame to processing channel: {:?}",
+                            e
+                        ));
                     }
                 }
                 Err(e) => {
-                    break Err(color_eyre::eyre::anyhow!(
+                    break Err(color_eyre::eyre::eyre!(
                         "Failed to read from socket: {:?}",
                         e
                     ));
