@@ -3,11 +3,12 @@ use tokio::{
     net::{TcpStream, tcp::OwnedWriteHalf},
 };
 
-use crate::{client::Client, header::Header};
+use crate::{client::Client, header::Header, perf::tcp_client_metrics::TcpClientMetrics};
 
 pub struct TcpClient {
     writer: OwnedWriteHalf,
     prev_frame: Option<Vec<u8>>,
+    metrics: TcpClientMetrics,
 }
 
 impl Client for TcpClient {
@@ -20,6 +21,7 @@ impl Client for TcpClient {
         Ok(TcpClient {
             writer,
             prev_frame: None,
+            metrics: TcpClientMetrics::default(),
         })
     }
 
@@ -47,6 +49,8 @@ impl Client for TcpClient {
             self.writer.write_all(data).await?;
             self.writer.flush().await?;
 
+            self.metrics
+                .record_full_frame(data.len() + header_bytes.len());
             self.prev_frame = Some(data.to_vec());
             return Ok(());
         }
@@ -68,6 +72,7 @@ impl Client for TcpClient {
         }
 
         if chunks.is_empty() {
+            self.metrics.record_skipped_frame();
             return Ok(());
         }
 
@@ -95,6 +100,10 @@ impl Client for TcpClient {
         self.writer.write_all(&payload).await?;
         self.writer.flush().await?;
 
+        self.metrics.record_delta_frame(
+            payload.len() + header_bytes.len(),
+            data.len() + header_bytes.len(),
+        );
         self.prev_frame = Some(data.to_vec());
 
         Ok(())
