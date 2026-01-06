@@ -1,7 +1,10 @@
 use tokio::{io::AsyncReadExt, net::TcpListener};
 use tracing::{info, trace, warn};
 
-use crate::{FrameData, FrameSender, header::Header, server::Server};
+use crate::{
+    FrameData, FrameSender, header::Header, perf::tcp_server_metrics::TcpServerMetrics,
+    server::Server,
+};
 
 pub struct TcpServer {
     port: u16,
@@ -22,6 +25,7 @@ impl Server for TcpServer {
         info!("New connection from {}", addr);
 
         let mut prev_frame = Option::<Vec<u8>>::None;
+        let mut metrics = TcpServerMetrics::default();
 
         loop {
             let mut raw_header = [0u8; 17];
@@ -46,6 +50,7 @@ impl Server for TcpServer {
                     socket.read_exact(&mut payload).await?;
 
                     if mode == 0 {
+                        metrics.record_full_frame(payload.len() + raw_header.len());
                         prev_frame = Some(payload.clone());
                         let frame_data = FrameData::new(payload, width, height);
                         if let Err(e) = self.tx.send(frame_data) {
@@ -97,6 +102,11 @@ impl Server for TcpServer {
                                 .copy_from_slice(&payload[cursor..cursor + len]);
                             cursor += len;
                         }
+
+                        metrics.record_delta_frame(
+                            payload_len as usize + raw_header.len(),
+                            total_len as usize,
+                        );
 
                         let frame_data = FrameData::new(buf.clone(), width, height);
                         if let Err(e) = self.tx.send(frame_data) {
