@@ -30,13 +30,16 @@ impl FrameLatencyMetrics {
         let avg = sum / self.latencies.len() as u32;
         let min = self.latencies.iter().min().copied().unwrap_or_default();
         let max = self.latencies.iter().max().copied().unwrap_or_default();
+        let avg_fps = self.latencies.len() as f64
+            / self.latencies.iter().map(|d| d.as_secs_f64()).sum::<f64>();
 
         info!(
-            "Frame Latency - Avg: {:?}, Min: {:?}, Max: {:?}, Count: {}",
+            "Frame Latency - Avg: {:?}, Min: {:?}, Max: {:?}, Count: {}, Avg FPS: {:.2}",
             avg,
             min,
             max,
-            self.latencies.len()
+            self.latencies.len(),
+            avg_fps
         );
     }
 }
