@@ -3,7 +3,9 @@ use tokio::{io::AsyncReadExt, net::TcpListener};
 use tracing::{info, trace};
 
 use crate::{
-    FrameData, FrameSender, header::Header, perf::tcp_server_metrics::TcpServerMetrics,
+    FrameData, FrameSender,
+    header::{HEADER_SIZE, Header},
+    perf::tcp_server_metrics::TcpServerMetrics,
     server::Server,
 };
 
@@ -28,16 +30,14 @@ impl Server for TcpServer {
         let mut metrics = TcpServerMetrics::default();
 
         loop {
-            let mut raw_header = [0u8; 17];
+            let mut raw_header = [0u8; HEADER_SIZE];
             match socket.read_exact(&mut raw_header).await {
                 Ok(0) => break Err(color_eyre::eyre::eyre!("Connection closed")),
                 Ok(_) => {
                     let header = Header::from(&raw_header);
                     let Header {
-                        mode: _,
                         width,
                         height,
-                        total_len: _,
                         payload_len,
                     } = header;
 

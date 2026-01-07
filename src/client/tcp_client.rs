@@ -3,7 +3,11 @@ use tokio::{
     net::{TcpStream, tcp::OwnedWriteHalf},
 };
 
-use crate::{client::Client, header::Header, perf::tcp_client_metrics::TcpClientMetrics};
+use crate::{
+    client::Client,
+    header::{HEADER_SIZE, Header},
+    perf::tcp_client_metrics::TcpClientMetrics,
+};
 
 pub struct TcpClient {
     writer: OwnedWriteHalf,
@@ -28,8 +32,6 @@ impl Client for TcpClient {
     }
 
     async fn send_frame(&mut self, data: &[u8], width: u32, height: u32) -> color_eyre::Result<()> {
-        let total_len = data.len() as u32;
-
         let image = turbojpeg::Image {
             pixels: data,
             width: width as usize,
@@ -39,16 +41,13 @@ impl Client for TcpClient {
         };
         let jpeg_data = self.compressor.compress_to_vec(image)?;
 
-        let mode: u8 = 0;
         let payload_len = jpeg_data.len() as u32;
         let header = Header {
-            mode,
             width,
             height,
-            total_len,
             payload_len,
         };
-        let header_bytes: [u8; 17] = header.into();
+        let header_bytes: [u8; HEADER_SIZE] = header.into();
 
         self.writer.write_all(&header_bytes).await?;
         self.writer.write_all(&jpeg_data).await?;
