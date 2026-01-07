@@ -120,18 +120,18 @@ impl PipeWireSource {
                     .parse(param)
                     .expect("Failed to parse param changed to VideoInfoRaw");
 
-                debug!("got video format:");
-                debug!(
+                info!("got video format:");
+                info!(
                     "\tformat: {} ({:?})",
                     user_data.format.format().as_raw(),
                     user_data.format.format()
                 );
-                debug!(
+                info!(
                     "\tsize: {}x{}",
                     user_data.format.size().width,
                     user_data.format.size().height
                 );
-                debug!(
+                info!(
                     "\tframerate: {}/{}",
                     user_data.format.framerate().num,
                     user_data.format.framerate().denom
