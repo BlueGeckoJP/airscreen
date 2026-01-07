@@ -6,6 +6,7 @@ use ashpd::desktop::{
     PersistMode,
     screencast::{CursorMode, Screencast, SourceType},
 };
+use image::RgbImage;
 use pipewire::{
     self as pw,
     properties::properties,
@@ -147,15 +148,21 @@ impl PipeWireSource {
 
                     let data = &mut datas[0];
 
+                    let width = user_data.format.size().width;
+                    let height = user_data.format.size().height;
+                    let data = data.data().unwrap();
+
                     let rgb_data = crate::utils::pixel_format_utils::convert_to_rgb(
                         user_data.format.format(),
-                        user_data.format.size().width,
-                        user_data.format.size().height,
-                        data.data().unwrap(),
+                        width,
+                        height,
+                        data,
                     );
 
+                    let rgb_image = RgbImage::from_raw(width, height, rgb_data).unwrap();
+
                     let frame_data = FrameData::new(
-                        rgb_data.clone(),
+                        rgb_image,
                         user_data.format.size().width,
                         user_data.format.size().height,
                     );

@@ -6,16 +6,18 @@ mod source;
 mod ui;
 mod utils;
 
+use image::RgbImage;
+
 use crate::ui::App;
 
 pub struct FrameData {
-    pub data: Vec<u8>,
+    pub data: RgbImage,
     pub width: u32,
     pub height: u32,
 }
 
 impl FrameData {
-    pub fn new(data: Vec<u8>, width: u32, height: u32) -> Self {
+    pub fn new(data: RgbImage, width: u32, height: u32) -> Self {
         FrameData {
             data,
             width,

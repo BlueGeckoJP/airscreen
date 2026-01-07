@@ -1,3 +1,4 @@
+use image::RgbImage;
 use tokio::{io::AsyncReadExt, net::TcpListener};
 use tracing::{info, trace};
 
@@ -48,10 +49,10 @@ impl Server for TcpServer {
                     let mut payload = vec![0u8; payload_len as usize];
                     socket.read_exact(&mut payload).await?;
 
-                    let rgb_image = turbojpeg::decompress(&payload, turbojpeg::PixelFormat::RGB)?;
+                    let rgb_image: RgbImage = turbojpeg::decompress_image(&payload)?;
 
                     metrics.record_full_frame(payload.len() + raw_header.len());
-                    let frame_data = FrameData::new(rgb_image.pixels, width, height);
+                    let frame_data = FrameData::new(rgb_image, width, height);
                     if let Err(e) = self.tx.send(frame_data) {
                         break Err(color_eyre::eyre::eyre!(
                             "Failed to send frame to processing channel: {:?}",

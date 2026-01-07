@@ -20,6 +20,7 @@ pub struct App {
     port: String,
 
     current_texture: Option<eframe::egui::TextureHandle>,
+    viewport_available_rect: Vec2,
 
     metrics: FrameLatencyMetrics,
 
@@ -38,6 +39,7 @@ impl App {
             ip_address: "0.0.0.0".to_string(),
             port: "51230".to_string(),
             current_texture: None,
+            viewport_available_rect: Vec2::new(1920.0, 1080.0),
             metrics: FrameLatencyMetrics::default(),
             join_handles: vec![],
         }
@@ -170,9 +172,16 @@ impl App {
                 .with_title("AirScreen Viewer")
                 .with_active(true),
             move |ctx, _class| {
-                egui::CentralPanel::default().show(ctx, |ui| {
-                    ui.image(&texture);
-                });
+                egui::CentralPanel::default()
+                    .frame(egui::Frame::default().inner_margin(0.0))
+                    .show(ctx, |ui| {
+                        let rect = ui.available_rect_before_wrap();
+                        self.viewport_available_rect = rect.size();
+
+                        ui.centered_and_justified(|ui| {
+                            ui.image(&texture);
+                        });
+                    });
 
                 if ctx.input(|i| i.viewport().close_requested()) {
                     info!("Requested to stop");
@@ -193,17 +202,40 @@ impl App {
         if let Some(data) = latest_frame {
             self.metrics.record_period_latency();
 
-            let pixels: Vec<Color32> = data
-                .data
+            let viewport_available = self.viewport_available_rect;
+            let viewport_width = viewport_available.x as u32;
+            let viewport_height = viewport_available.y as u32;
+            let viewport_aspect = viewport_width as f32 / viewport_height as f32;
+
+            let image_aspect = data.width as f32 / data.height as f32;
+
+            let (new_width, new_height) = if viewport_aspect > image_aspect {
+                let h = viewport_height;
+                let w = (h as f32 * image_aspect) as u32;
+                (w, h)
+            } else {
+                let w = viewport_width;
+                let h = (w as f32 / image_aspect) as u32;
+                (w, h)
+            };
+
+            let resized = image::imageops::resize(
+                &data.data,
+                new_width,
+                new_height,
+                image::imageops::FilterType::Nearest,
+            );
+
+            let pixels: Vec<Color32> = resized
                 .par_chunks_exact(3)
                 .map(|chunk| Color32::from_rgb(chunk[0], chunk[1], chunk[2]))
                 .collect();
 
             let image = ColorImage {
-                size: [data.width as usize, data.height as usize],
+                size: [new_width as usize, new_height as usize],
                 source_size: Vec2 {
-                    x: data.width as f32,
-                    y: data.height as f32,
+                    x: new_width as f32,
+                    y: new_height as f32,
                 },
                 pixels,
             };
