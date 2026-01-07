@@ -8,6 +8,7 @@ async-trait = "0.1"
 color-eyre = "0.6"
 crossbeam-channel = "0.5"
 eframe = { version = "0.33", features = ["wgpu"] }
+rayon = "1.11"
 tokio = { version = "1.48", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = "0.3"

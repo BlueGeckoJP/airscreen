@@ -1,6 +1,7 @@
 use std::time::Duration;
 
-use eframe::egui::{self, ViewportBuilder, ViewportId};
+use eframe::egui::{self, Color32, ColorImage, Vec2, ViewportBuilder, ViewportId};
+use rayon::{iter::ParallelIterator, slice::ParallelSlice};
 use tokio::task::JoinHandle;
 use tracing::{error, info};
 
@@ -192,17 +193,24 @@ impl App {
         if let Some(data) = latest_frame {
             self.metrics.record_period_latency();
 
+            let pixels: Vec<Color32> = data
+                .data
+                .par_chunks_exact(3)
+                .map(|chunk| Color32::from_rgb(chunk[0], chunk[1], chunk[2]))
+                .collect();
+
+            let image = ColorImage {
+                size: [data.width as usize, data.height as usize],
+                source_size: Vec2 {
+                    x: data.width as f32,
+                    y: data.height as f32,
+                },
+                pixels,
+            };
+
             if let Some(texture) = &mut self.current_texture {
-                let image = eframe::egui::ColorImage::from_rgb(
-                    [data.width as usize, data.height as usize],
-                    &data.data,
-                );
                 texture.set(image, eframe::egui::TextureOptions::NEAREST);
             } else {
-                let image = eframe::egui::ColorImage::from_rgb(
-                    [data.width as usize, data.height as usize],
-                    &data.data,
-                );
                 let texture = ctx.load_texture(
                     "current_frame",
                     image,
