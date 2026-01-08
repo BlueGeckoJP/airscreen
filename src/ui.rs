@@ -52,6 +52,8 @@ impl App {
     }
 
     fn draw_central_panel(&mut self, ctx: &eframe::egui::Context) {
+        self.metrics.record_draw_parent_vp_latency();
+
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.heading("AirScreen");
             ui.add_space(10.0);
@@ -150,8 +152,10 @@ impl App {
                         self.join_handles.push(handle);
                     }
                 }
-            })
+            });
         });
+
+        self.metrics.record_draw_parent_vp_latency();
     }
 
     fn draw_viewer_viewport(&mut self, ctx: &eframe::egui::Context) {
@@ -172,6 +176,8 @@ impl App {
                 .with_title("AirScreen Viewer")
                 .with_active(true),
             move |ctx, _class| {
+                self.metrics.record_draw_image_vp_latency();
+
                 egui::CentralPanel::default()
                     .frame(egui::Frame::default().inner_margin(0.0))
                     .show(ctx, |ui| {
@@ -182,6 +188,8 @@ impl App {
                             ui.image(&texture);
                         });
                     });
+
+                self.metrics.record_draw_image_vp_latency();
 
                 if ctx.input(|i| i.viewport().close_requested()) {
                     info!("Requested to stop");
@@ -258,9 +266,13 @@ impl App {
 
 impl eframe::App for App {
     fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
+        self.metrics.record_total_latency();
+
         self.update_texture(ctx);
         self.draw_viewer_viewport(ctx);
         self.draw_central_panel(ctx);
+
+        self.metrics.record_total_latency();
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
