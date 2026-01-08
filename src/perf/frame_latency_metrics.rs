@@ -72,36 +72,23 @@ impl FrameLatencyMetrics {
     fn log_stats(&self) {
         let _span = tracing::info_span!("Frame Latency Metrics").entered();
 
-        if self.texture_latencies.is_empty() {
-            info!("No texture latencies recorded.");
-        } else {
-            let texture_result = Self::summarize(&self.texture_latencies, "Texture Latency");
-            info!("{}", texture_result);
-        }
-
-        if self.draw_parent_vp_latencies.is_empty() {
-            info!("No draw parent viewport latencies recorded.");
-        } else {
-            let draw_parent_vp_result = Self::summarize(
+        let metrics = [
+            (&self.texture_latencies, "Texture Latency"),
+            (
                 &self.draw_parent_vp_latencies,
                 "Draw Parent Viewport Latency",
-            );
-            info!("{}", draw_parent_vp_result);
-        }
+            ),
+            (&self.draw_image_vp_latencies, "Draw Image Viewport Latency"),
+            (&self.total_latencies, "Total Frame Latency"),
+        ];
 
-        if self.draw_image_vp_latencies.is_empty() {
-            info!("No draw image viewport latencies recorded.");
-        } else {
-            let draw_image_vp_result =
-                Self::summarize(&self.draw_image_vp_latencies, "Draw Image Viewport Latency");
-            info!("{}", draw_image_vp_result);
-        }
-
-        if self.total_latencies.is_empty() {
-            info!("No total frame latencies recorded.");
-        } else {
-            let total_result = Self::summarize(&self.total_latencies, "Total Frame Latency");
-            info!("{}", total_result);
+        for (latencies, title) in metrics {
+            if latencies.is_empty() {
+                info!("No {} recorded.", title);
+            } else {
+                let result = Self::summarize(latencies, title);
+                info!("{}", result);
+            }
         }
     }
 }
