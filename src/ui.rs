@@ -200,7 +200,7 @@ impl App {
         }
 
         if let Some(data) = latest_frame {
-            self.metrics.record_period_latency();
+            self.metrics.record_texture_latency();
 
             let viewport_available = self.viewport_available_rect;
             let viewport_width = viewport_available.x as u32;
@@ -251,7 +251,7 @@ impl App {
                 self.current_texture = Some(texture);
             }
 
-            self.metrics.record_period_latency();
+            self.metrics.record_texture_latency();
         }
     }
 }

@@ -3,17 +3,17 @@ use tracing::info;
 
 #[derive(Default)]
 pub struct FrameLatencyMetrics {
-    latencies: Vec<Duration>,
+    texture_latencies: Vec<Duration>,
     prev_instant: Option<Instant>,
 }
 
 impl FrameLatencyMetrics {
-    pub fn record_period_latency(&mut self) {
+    pub fn record_texture_latency(&mut self) {
         let now = Instant::now();
 
         if let Some(prev) = self.prev_instant {
             let latency = now.duration_since(prev);
-            self.latencies.push(latency);
+            self.texture_latencies.push(latency);
             self.prev_instant = None;
         }
 
@@ -21,25 +21,39 @@ impl FrameLatencyMetrics {
     }
 
     fn log_stats(&self) {
-        if self.latencies.is_empty() {
+        if self.texture_latencies.is_empty() {
             info!("No frame latencies recorded.");
             return;
         }
 
-        let sum: Duration = self.latencies.iter().sum();
-        let avg = sum / self.latencies.len() as u32;
-        let min = self.latencies.iter().min().copied().unwrap_or_default();
-        let max = self.latencies.iter().max().copied().unwrap_or_default();
-        let avg_fps = self.latencies.len() as f64
-            / self.latencies.iter().map(|d| d.as_secs_f64()).sum::<f64>();
+        let sum: Duration = self.texture_latencies.iter().sum();
+        let avg = sum / self.texture_latencies.len() as u32;
+        let min = self
+            .texture_latencies
+            .iter()
+            .min()
+            .copied()
+            .unwrap_or_default();
+        let max = self
+            .texture_latencies
+            .iter()
+            .max()
+            .copied()
+            .unwrap_or_default();
+        let texture_avg_fps = self.texture_latencies.len() as f64
+            / self
+                .texture_latencies
+                .iter()
+                .map(|d| d.as_secs_f64())
+                .sum::<f64>();
 
         info!(
-            "Frame Latency - Avg: {:?}, Min: {:?}, Max: {:?}, Count: {}, Avg FPS: {:.2}",
+            "Frame Latency - Avg: {:?}, Min: {:?}, Max: {:?}, Count: {}, Avg Texture FPS: {:.2}",
             avg,
             min,
             max,
-            self.latencies.len(),
-            avg_fps
+            self.texture_latencies.len(),
+            texture_avg_fps
         );
     }
 }
