@@ -152,12 +152,8 @@ impl PipeWireSource {
                     let height = user_data.format.size().height;
                     let data = data.data().unwrap();
 
-                    let rgb_data = crate::utils::pixel_format_utils::convert_to_rgb(
-                        user_data.format.format(),
-                        width,
-                        height,
-                        data,
-                    );
+                    let rgb_data =
+                        crate::utils::pixel_format_utils::rgba8_to_rgb(data, width, height);
 
                     let rgb_image = RgbImage::from_raw(width, height, rgb_data).unwrap();
 
