@@ -32,7 +32,7 @@ pub async fn run_client(ip: String, port: String) -> color_eyre::Result<Vec<Join
     }
 
     let join_handle = tokio::spawn(async move {
-        let mut client = client::tcp_client::TcpClient::new(&ip, port_u16)
+        let mut client = client::quic_h264_client::QuicH264Client::new(&ip, port_u16)
             .await
             .expect("failed to create client");
 

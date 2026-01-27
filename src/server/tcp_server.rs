@@ -19,7 +19,7 @@ impl Server for TcpServer {
         Ok(TcpServer { port, tx })
     }
 
-    async fn listen(&self) -> color_eyre::Result<()> {
+    async fn listen(&mut self) -> color_eyre::Result<()> {
         let address = format!("0.0.0.0:{}", self.port);
         let listener = TcpListener::bind(&address).await?;
         info!("Server listening on {}", address);

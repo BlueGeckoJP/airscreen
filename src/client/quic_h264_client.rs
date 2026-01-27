@@ -1,13 +1,19 @@
-use std::net::{ToSocketAddrs, UdpSocket};
+use std::{
+    net::{ToSocketAddrs, UdpSocket},
+    time::Duration,
+};
 
 use crate::{MAX_DATAGRAM_SIZE, client::Client};
 use color_eyre::eyre::OptionExt;
+use quiche::RecvInfo;
 use rand::TryRngCore;
 use tracing::info;
 
 pub struct QuicH264Client {
     socket: UdpSocket,
     conn: quiche::Connection,
+    buf: [u8; 65535],
+    out: [u8; MAX_DATAGRAM_SIZE],
 }
 
 impl Client for QuicH264Client {
@@ -50,10 +56,99 @@ impl Client for QuicH264Client {
 
         let conn = quiche::connect(Some("localhost"), &scid, local_addr, peer_addr, &mut config)?;
 
-        Ok(QuicH264Client { socket, conn })
+        Ok(QuicH264Client {
+            socket,
+            conn,
+            buf: [0; 65535],
+            out: [0; MAX_DATAGRAM_SIZE],
+        })
     }
 
     async fn send_frame(&mut self, data: &[u8], width: u32, height: u32) -> color_eyre::Result<()> {
+        self.complete_handshake()?;
+
+        let stream_id = 0;
+
+        self.conn.stream_send(stream_id, data, true)?;
+
+        self.flush_egress()?;
+
+        Ok(())
+    }
+}
+
+impl QuicH264Client {
+    fn complete_handshake(&mut self) -> color_eyre::Result<()> {
+        loop {
+            let (write, _) = match self.conn.send(&mut self.out) {
+                Ok(v) => v,
+                Err(quiche::Error::Done) => break,
+                Err(e) => {
+                    return Err(color_eyre::eyre::eyre!(
+                        "Failed to send handshake packet: {:?}",
+                        e
+                    ));
+                }
+            };
+
+            self.socket.send(&self.out[..write])?;
+        }
+
+        while !self.conn.is_established() {
+            let len = match self.socket.recv(&mut self.buf) {
+                Ok(v) => v,
+                Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                    self.socket.set_read_timeout(Some(Duration::from_secs(5)))?;
+                    continue;
+                }
+                Err(e) => {
+                    return Err(color_eyre::eyre::eyre!(
+                        "Failed to receive handshake packet: {:?}",
+                        e
+                    ));
+                }
+            };
+
+            let recv_info = RecvInfo {
+                to: self.socket.local_addr()?,
+                from: self.socket.peer_addr()?,
+            };
+
+            self.conn.recv(&mut self.buf[..len], recv_info)?;
+
+            loop {
+                let (write, _) = match self.conn.send(&mut self.out) {
+                    Ok(v) => v,
+                    Err(quiche::Error::Done) => break,
+                    Err(e) => {
+                        return Err(color_eyre::eyre::eyre!(
+                            "Failed to send handshake packet: {:?}",
+                            e
+                        ));
+                    }
+                };
+
+                self.socket.send(&self.out[..write])?;
+            }
+        }
+
+        info!("QUIC handshake completed");
+        Ok(())
+    }
+
+    fn flush_egress(&mut self) -> color_eyre::Result<()> {
+        loop {
+            let (write, _) = match self.conn.send(&mut self.out) {
+                Ok(v) => v,
+                Err(quiche::Error::Done) => break,
+                Err(e) => {
+                    return Err(color_eyre::eyre::eyre!("Failed to send packet: {:?}", e));
+                }
+            };
+
+            self.socket.send(&self.out[..write])?;
+        }
+
         Ok(())
     }
 }
