@@ -10,6 +10,8 @@ use image::RgbImage;
 
 use crate::ui::App;
 
+const MAX_DATAGRAM_SIZE: usize = 1350;
+
 pub struct FrameData {
     pub data: RgbImage,
     pub width: u32,

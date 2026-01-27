@@ -9,7 +9,10 @@ color-eyre = "0.6"
 crossbeam-channel = "0.5"
 eframe = { version = "0.33", features = ["wgpu"] }
 image = "0.25"
+quiche = "0.24"
+rand = "0.9"
 rayon = "1.11"
+rcgen = "0.14"
 tokio = { version = "1.48", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = "0.3"
