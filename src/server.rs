@@ -3,6 +3,7 @@ use tracing::error;
 
 use crate::{FrameSender, server};
 
+pub mod quic_ffmpeg_server;
 pub mod tcp_server;
 
 pub trait Server {
